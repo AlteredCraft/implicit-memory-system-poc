@@ -23,7 +23,7 @@ from memory_tool import LocalFilesystemMemoryTool
 load_dotenv()
 
 
-def setup_logging(log_level: str = "INFO", log_file: str = None) -> None:
+def setup_logging(log_level: str = "INFO", log_file: str|None = None) -> None:
     """Configure logging based on log level and optional file output."""
     # Convert string level to logging constant
     level = getattr(logging, log_level.upper(), logging.INFO)
@@ -91,7 +91,11 @@ def conversation_loop():
     logger = logging.getLogger(__name__)
 
     # Get model from environment with default to Sonnet 4.5
-    model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
+    model = os.getenv("ANTHROPIC_MODEL", "").strip()
+    if not model:
+        print("Error: ANTHROPIC_MODEL not found in environment")
+        print("Create a .env file with: ANTHROPIC_MODEL=your_desired_model_here")
+        sys.exit(1)
 
     # Initialize client and memory tool
     client = Anthropic(api_key=api_key)
