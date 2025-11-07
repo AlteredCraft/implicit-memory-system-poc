@@ -12,6 +12,7 @@ import os
 import sys
 import logging
 from pathlib import Path
+from datetime import datetime
 from dotenv import load_dotenv
 from anthropic import Anthropic
 from anthropic.types.beta import BetaMemoryTool20250818ViewCommand
@@ -72,13 +73,13 @@ def setup_logging(app_log_level: str = "INFO", dependencies_log_level: str = "WA
 
 
 def load_system_prompt(prompt_file: str = "prompts/system_prompt.txt") -> str:
-    """Load system prompt from file, stripping comment lines.
+    """Load system prompt from file, stripping comment lines and appending current date.
 
     Args:
         prompt_file: Path to the prompt file (relative to project root)
 
     Returns:
-        The system prompt with comments removed
+        The system prompt with comments removed and current date appended
     """
     try:
         with open(prompt_file, 'r', encoding='utf-8') as f:
@@ -91,7 +92,13 @@ def load_system_prompt(prompt_file: str = "prompts/system_prompt.txt") -> str:
                 elif not stripped:
                     # Preserve blank lines
                     lines.append('')
-            return '\n'.join(lines).strip()
+            prompt = '\n'.join(lines).strip()
+
+            # Append current date/time
+            current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            prompt += f"\n\nToday's date is: {current_date}"
+
+            return prompt
     except FileNotFoundError:
         logging.getLogger(__name__).error(f"System prompt file not found: {prompt_file}")
         raise
