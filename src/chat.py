@@ -71,6 +71,32 @@ def setup_logging(app_log_level: str = "INFO", dependencies_log_level: str = "WA
         logging.getLogger(logger_name).setLevel(app_level)
 
 
+def load_system_prompt(prompt_file: str = "prompts/system_prompt.txt") -> str:
+    """Load system prompt from file, stripping comment lines.
+
+    Args:
+        prompt_file: Path to the prompt file (relative to project root)
+
+    Returns:
+        The system prompt with comments removed
+    """
+    try:
+        with open(prompt_file, 'r', encoding='utf-8') as f:
+            lines = []
+            for line in f:
+                # Strip comment lines (lines starting with #)
+                stripped = line.strip()
+                if stripped and not stripped.startswith('#'):
+                    lines.append(line.rstrip())
+                elif not stripped:
+                    # Preserve blank lines
+                    lines.append('')
+            return '\n'.join(lines).strip()
+    except FileNotFoundError:
+        logging.getLogger(__name__).error(f"System prompt file not found: {prompt_file}")
+        raise
+
+
 def print_welcome():
     """Display welcome message and instructions."""
     print("\n" + "="*70)
@@ -120,16 +146,9 @@ def conversation_loop():
     client = Anthropic(api_key=api_key)
     memory_tool = LocalFilesystemMemoryTool()
 
-    # System prompt: Guide Claude to manage memory autonomously
-    system_prompt = """You are a helpful assistant with persistent memory capabilities.
-
-Key behaviors:
-- Autonomously decide what information is worth remembering (names, preferences, project details, etc.)
-- Use your memory tool to save important facts without being explicitly asked
-- Keep memories organized and up-to-date - remove outdated info, consolidate related facts
-- Recall relevant memories when they help provide better responses
-
-You have complete authority over your memory. Manage it wisely."""
+    # Load system prompt from file
+    system_prompt = load_system_prompt()
+    logger.debug(f"Loaded system prompt from prompts/system_prompt.txt")
 
     print_welcome()
     logger.info(f"Starting conversation loop with model: {model}")
