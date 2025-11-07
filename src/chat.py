@@ -70,10 +70,10 @@ def setup_logging(log_level: str = "INFO", log_file: str|None = None) -> None:
         logging.getLogger('__main__').setLevel(logging.DEBUG)
         logging.getLogger('memory_tool').setLevel(logging.DEBUG)
 
-        # Keep dependencies at INFO level to reduce noise
-        logging.getLogger('anthropic').setLevel(logging.INFO)
-        logging.getLogger('httpx').setLevel(logging.INFO)
-        logging.getLogger('httpcore').setLevel(logging.INFO)
+        # Keep dependencies at WARNING level to reduce noise
+        logging.getLogger('anthropic').setLevel(logging.WARNING)
+        logging.getLogger('httpx').setLevel(logging.WARNING)
+        logging.getLogger('httpcore').setLevel(logging.WARNING)
     else:
         # Apply the specified level to our app loggers
         logging.getLogger('src').setLevel(level)
