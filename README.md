@@ -84,6 +84,42 @@ python scripts/generate_sequence_diagram.py sessions/session_*.json
 
 ---
 
+## Sequence Diagram Generation
+
+Visualize your conversation flow by generating Mermaid sequence diagrams from session traces.
+
+**How to use:**
+
+```bash
+# Generate diagram from a session trace
+uv run scripts/generate_sequence_diagram.py sessions/session_20250109_143022_abc123.json
+
+# Output: Sequence diagram saved to: ./diagrams/sequence_20250109_143022_abc123.md
+```
+
+**What's generated:**
+- Mermaid sequence diagram showing interaction flow
+- User inputs and LLM responses
+- Memory tool operations (view, create, str_replace, etc.)
+- Tool execution results and errors
+- Chronological visualization of conversation turns
+
+**Diagram shows interactions between:**
+- **User** - Your inputs
+- **Host App** - The chat application (chat.py)
+- **Claude LLM** - The AI model making decisions
+- **Memory System** - The memory_tool operations
+
+The generated diagrams are saved to `./diagrams/` and can be viewed in any Markdown viewer that supports Mermaid (GitHub, VS Code, etc.).
+
+**Example diagram features:**
+- Color-coded conversation turns
+- Tool call parameters and results
+- Error recovery flows
+- Token usage statistics
+
+---
+
 ## Troubleshooting
 
 **Claude isn't remembering things?**

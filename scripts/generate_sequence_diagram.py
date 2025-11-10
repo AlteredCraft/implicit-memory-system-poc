@@ -1,187 +1,61 @@
 #!/usr/bin/env python3
 """
-Generate Mermaid sequence diagrams from session trace files.
+Generate Mermaid Sequence Diagram from Session Trace
 
-This script parses a session trace JSON file and generates a Mermaid sequence diagram
-that visualizes the interactions between User, Host App, LLM, and Memory System.
+This script reads a session trace JSON file and generates a Mermaid sequence diagram
+showing the interaction flow between User, Host App, LLM, and Memory System.
 
 Usage:
-    python scripts/generate_sequence_diagram.py <trace_file> [--output <output_file>]
+    python scripts/generate_sequence_diagram.py <session_trace_file.json>
 
-Example:
-    python scripts/generate_sequence_diagram.py sessions/session_20251109_143414_a1b2c3d4.json
-    python scripts/generate_sequence_diagram.py sessions/session_20251109_143414_a1b2c3d4.json --output diagram.md
+The diagram is saved to ./diagrams/ directory with a name based on the session ID.
 """
 
 import json
-import sys
 import argparse
 from pathlib import Path
-from typing import Any, Dict, List
+from datetime import datetime
+from typing import Dict, List, Any
 
 
-def truncate_text(text: str, max_length: int = 60) -> str:
-    """Truncate text for display in diagrams."""
-    if len(text) <= max_length:
-        return text
-    return text[:max_length] + "..."
+def escape_text(text: str, max_length: int = 50) -> str:
+    """
+    Escape special characters and truncate text for Mermaid diagram.
 
+    Args:
+        text: Text to escape
+        max_length: Maximum length before truncation
 
-def escape_diagram_text(text: str) -> str:
-    """Escape special characters for Mermaid diagrams."""
-    # Replace newlines with <br/> for proper rendering
-    text = text.replace("\n", "<br/>")
-    # Escape quotes
-    text = text.replace('"', '\\"')
+    Returns:
+        Escaped and truncated text
+    """
+    # Replace newlines and quotes
+    text = text.replace('\n', '<br/>')
+    text = text.replace('"', "'")
+
+    # Truncate if too long
+    if len(text) > max_length:
+        text = text[:max_length] + "..."
+
     return text
 
 
-def format_parameters(params: Dict[str, Any], max_params: int = 2) -> str:
-    """Format tool call parameters for diagram display."""
-    if not params:
-        return ""
-
-    # Show only first few parameters
-    items = list(params.items())[:max_params]
-    formatted = ", ".join(f"{k}={repr(v)[:30]}" for k, v in items)
-
-    if len(params) > max_params:
-        formatted += "..."
-
-    return formatted
-
-
-def group_conversation_turns(events: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
+def generate_mermaid_diagram(trace_data: Dict[str, Any]) -> str:
     """
-    Group events into conversation turns.
-    Each turn starts with a user_input and ends with an llm_response.
+    Generate a Mermaid sequence diagram from session trace data.
+
+    Args:
+        trace_data: Parsed session trace JSON
+
+    Returns:
+        Mermaid diagram as a string
     """
-    turns = []
-    current_turn = []
-
-    for event in events:
-        event_type = event.get("event_type")
-
-        if event_type == "user_input":
-            # Start a new turn
-            if current_turn:
-                turns.append(current_turn)
-            current_turn = [event]
-        else:
-            current_turn.append(event)
-
-    # Add the last turn
-    if current_turn:
-        turns.append(current_turn)
-
-    return turns
-
-
-def generate_diagram_for_turn(turn_number: int, events: List[Dict[str, Any]]) -> List[str]:
-    """Generate diagram lines for a single conversation turn."""
-    lines = []
-
-    # Determine turn color (cycle through colors)
-    colors = [
-        "rgb(200, 220, 255)",  # Blue
-        "rgb(220, 255, 220)",  # Green
-        "rgb(255, 220, 220)",  # Red
-        "rgb(255, 240, 200)",  # Yellow
-        "rgb(230, 200, 255)",  # Purple
-    ]
-    color = colors[(turn_number - 1) % len(colors)]
-
-    # Start turn block
-    lines.append(f"    rect {color}")
-
-    # Find user input for turn label
-    user_input = next((e for e in events if e.get("event_type") == "user_input"), None)
-    if user_input:
-        user_text = truncate_text(user_input.get("content", ""), 50)
-        lines.append(f'        Note over User,MemorySystem: TURN {turn_number}: "{user_text}"')
-        lines.append("")
-
-    # Process events in the turn
-    for event in events:
-        event_type = event.get("event_type")
-
-        if event_type == "user_input":
-            content = truncate_text(event.get("content", ""))
-            content = escape_diagram_text(content)
-            lines.append(f'        User->>HostApp: "{content}"')
-            lines.append("        HostApp->>HostApp: messages.append(user)")
-            lines.append("")
-
-        elif event_type == "llm_request":
-            tools = event.get("tools", [])
-            tools_str = ", ".join(tools)
-            lines.append(f"        HostApp->>LLM: POST /messages<br/>tools: [{tools_str}]<br/>messages: [history]")
-            lines.append("")
-
-        elif event_type == "tool_call":
-            tool_name = event.get("tool_name", "unknown")
-            command = event.get("command", "unknown")
-            params = event.get("parameters", {})
-
-            # Add a note about what the LLM is doing
-            lines.append(f"        Note over LLM: Calling {tool_name}.{command}()")
-            lines.append("")
-
-            # Format parameters
-            params_str = format_parameters(params)
-            if params_str:
-                lines.append(f"        LLM->>MemorySystem: {command}(<br/>  {params_str}<br/>)")
-            else:
-                lines.append(f"        LLM->>MemorySystem: {command}()")
-            lines.append("        activate MemorySystem")
-
-        elif event_type == "tool_result":
-            tool_name = event.get("tool_name", "unknown")
-            command = event.get("command", "unknown")
-            success = event.get("success", True)
-            error = event.get("error")
-            result = event.get("result", "")
-
-            if success:
-                # Truncate result for display
-                result_preview = truncate_text(result, 40)
-                result_preview = escape_diagram_text(result_preview)
-                lines.append(f'        MemorySystem-->>LLM: ✓ {result_preview}')
-            else:
-                error_msg = escape_diagram_text(error or "Error")
-                lines.append(f'        MemorySystem-->>LLM: ✗ ERROR<br/>{error_msg}')
-
-            lines.append("        deactivate MemorySystem")
-            lines.append("")
-
-        elif event_type == "llm_response":
-            content = truncate_text(event.get("content", ""), 50)
-            content = escape_diagram_text(content)
-            lines.append(f'        LLM-->>HostApp: "{content}"')
-            lines.append("        HostApp->>HostApp: messages.append(assistant)")
-            lines.append("        HostApp-->>User: Display response")
-            lines.append("")
-
-    # End turn block
-    lines.append("    end")
-    lines.append("")
-
-    return lines
-
-
-def generate_sequence_diagram(trace_data: Dict[str, Any]) -> str:
-    """Generate a Mermaid sequence diagram from trace data."""
     lines = [
-        "# Session Trace Sequence Diagram",
+        "# Session Sequence Diagram",
         "",
-        "## Session Information",
-        "",
-        f"- **Session ID**: {trace_data.get('session_id', 'N/A')}",
-        f"- **Model**: {trace_data.get('model', 'N/A')}",
-        f"- **Start Time**: {trace_data.get('start_time', 'N/A')}",
-        f"- **End Time**: {trace_data.get('end_time', 'N/A')}",
-        "",
-        "## Sequence Diagram",
+        f"**Session ID:** {trace_data.get('session_id', 'unknown')}  ",
+        f"**Start Time:** {trace_data.get('start_time', 'unknown')}  ",
+        f"**Model:** {trace_data.get('model', 'unknown')}  ",
         "",
         "```mermaid",
         "sequenceDiagram",
@@ -190,133 +64,148 @@ def generate_sequence_diagram(trace_data: Dict[str, Any]) -> str:
         "    participant LLM as Claude LLM",
         "    participant MemorySystem as Memory System<br/>(memory_tool)",
         "",
+        "    Note over HostApp: Session Started",
     ]
 
-    # Group events into conversation turns
-    events = trace_data.get("events", [])
-    turns = group_conversation_turns(events)
+    events = trace_data.get('events', [])
+    turn_number = 0
+    in_turn = False
 
-    # Generate diagram for each turn
-    for turn_number, turn_events in enumerate(turns, start=1):
-        turn_lines = generate_diagram_for_turn(turn_number, turn_events)
-        lines.extend(turn_lines)
+    for i, event in enumerate(events):
+        event_type = event.get('event_type')
 
-    # Close diagram
+        if event_type == 'user_input':
+            # Start a new conversation turn
+            turn_number += 1
+            content = escape_text(event.get('content', ''))
+
+            lines.append("")
+            lines.append(f"    rect rgb(200, 220, 255)")
+            lines.append(f"        Note over User,MemorySystem: Turn {turn_number}: User Input")
+            lines.append("")
+            lines.append(f'        User->>HostApp: "{content}"')
+            lines.append("        HostApp->>HostApp: Append to messages")
+            in_turn = True
+
+        elif event_type == 'llm_request':
+            if in_turn:
+                lines.append("")
+                lines.append(f"        HostApp->>LLM: POST /messages<br/>tools: {event.get('tools', [])}")
+
+        elif event_type == 'tool_call':
+            tool_name = event.get('tool_name', '')
+            command = event.get('command', '')
+            parameters = event.get('parameters', {})
+
+            if tool_name == 'memory':
+                # Format parameters for display
+                params_str = ', '.join([f"{k}={repr(v)[:30]}" for k, v in parameters.items()])
+                if len(params_str) > 50:
+                    params_str = params_str[:50] + "..."
+
+                lines.append("")
+                lines.append(f"        Note over LLM: Decides to {command}")
+                lines.append(f"        LLM->>MemorySystem: {command}({params_str})")
+                lines.append("        activate MemorySystem")
+
+        elif event_type == 'tool_result':
+            tool_name = event.get('tool_name', '')
+            command = event.get('command', '')
+            success = event.get('success', True)
+            error = event.get('error')
+            result = event.get('result', '')
+
+            if tool_name == 'memory':
+                if success:
+                    result_preview = escape_text(result, 40)
+                    lines.append(f'        MemorySystem-->>LLM: {result_preview}')
+                else:
+                    error_msg = escape_text(error or 'Error', 40)
+                    lines.append(f'        MemorySystem-->>LLM: ERROR: {error_msg}')
+                lines.append("        deactivate MemorySystem")
+
+        elif event_type == 'llm_response':
+            content = escape_text(event.get('content', ''), 60)
+
+            lines.append("")
+            lines.append("        Note over LLM: Ready to respond")
+            lines.append(f'        LLM-->>HostApp: "{content}"')
+            lines.append("        HostApp->>HostApp: Append to messages")
+            lines.append(f'        HostApp-->>User: "{content}"')
+
+            if in_turn:
+                lines.append("    end")
+                in_turn = False
+
+        elif event_type == 'error':
+            error_msg = escape_text(event.get('message', 'Unknown error'), 40)
+            lines.append(f"    Note over HostApp: ERROR: {error_msg}")
+
+    # Close any open turn
+    if in_turn:
+        lines.append("    end")
+
+    lines.append("")
+    lines.append("    Note over HostApp: Session Ended")
     lines.append("```")
-    lines.append("")
 
-    # Add summary statistics
-    lines.extend([
-        "## Summary Statistics",
-        "",
-    ])
-
-    # Count events by type
-    event_counts = {}
-    for event in events:
-        event_type = event.get("event_type")
-        event_counts[event_type] = event_counts.get(event_type, 0) + 1
-
-    lines.append("### Event Counts")
-    lines.append("")
-    for event_type, count in sorted(event_counts.items()):
-        lines.append(f"- **{event_type}**: {count}")
-    lines.append("")
-
-    # Extract token usage from last token_usage event
-    token_events = [e for e in events if e.get("event_type") == "token_usage"]
-    if token_events:
-        last_token_event = token_events[-1]
-        cumulative = last_token_event.get("cumulative", {})
-
-        lines.append("### Token Usage (Cumulative)")
-        lines.append("")
-        lines.append(f"- **Input Tokens**: {cumulative.get('total_input_tokens', 0):,}")
-        lines.append(f"- **Output Tokens**: {cumulative.get('total_output_tokens', 0):,}")
-        lines.append(f"- **Cache Read Tokens**: {cumulative.get('total_cache_read_tokens', 0):,}")
-        lines.append(f"- **Cache Write Tokens**: {cumulative.get('total_cache_write_tokens', 0):,}")
-        lines.append("")
-
-    # Count tool calls by command
-    tool_calls = [e for e in events if e.get("event_type") == "tool_call"]
-    if tool_calls:
-        command_counts = {}
-        for tool_call in tool_calls:
-            command = tool_call.get("command")
-            command_counts[command] = command_counts.get(command, 0) + 1
-
-        lines.append("### Memory Tool Commands Used")
-        lines.append("")
-        for command, count in sorted(command_counts.items(), key=lambda x: -x[1]):
-            lines.append(f"- **{command}**: {count}")
-        lines.append("")
-
-    return "\n".join(lines)
+    return '\n'.join(lines)
 
 
 def main():
+    """Main entry point for the script."""
     parser = argparse.ArgumentParser(
-        description="Generate Mermaid sequence diagrams from session trace files",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-    # Generate diagram and print to stdout
-    python scripts/generate_sequence_diagram.py sessions/session_20251109_143414_a1b2c3d4.json
-
-    # Save diagram to file
-    python scripts/generate_sequence_diagram.py sessions/session_20251109_143414_a1b2c3d4.json --output diagram.md
-
-    # Process latest session
-    python scripts/generate_sequence_diagram.py $(ls -t sessions/*.json | head -1)
-        """
+        description='Generate Mermaid sequence diagram from session trace'
     )
-
     parser.add_argument(
-        "trace_file",
-        type=str,
-        help="Path to the session trace JSON file"
+        'trace_file',
+        help='Path to session trace JSON file'
     )
-
     parser.add_argument(
-        "-o", "--output",
-        type=str,
-        help="Output file path (default: print to stdout)"
+        '-o', '--output',
+        help='Output file path (default: ./diagrams/sequence_<session_id>.md)'
     )
 
     args = parser.parse_args()
 
-    # Load trace file
+    # Read the trace file
     trace_path = Path(args.trace_file)
     if not trace_path.exists():
-        print(f"Error: Trace file not found: {trace_path}", file=sys.stderr)
-        sys.exit(1)
+        print(f"Error: Trace file not found: {trace_path}")
+        return 1
 
     try:
         with open(trace_path, 'r', encoding='utf-8') as f:
             trace_data = json.load(f)
     except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON in trace file: {e}", file=sys.stderr)
-        sys.exit(1)
-    except Exception as e:
-        print(f"Error reading trace file: {e}", file=sys.stderr)
-        sys.exit(1)
+        print(f"Error: Invalid JSON in trace file: {e}")
+        return 1
 
-    # Generate diagram
-    diagram = generate_sequence_diagram(trace_data)
+    # Generate the diagram
+    diagram = generate_mermaid_diagram(trace_data)
 
-    # Output
+    # Determine output path
     if args.output:
         output_path = Path(args.output)
-        try:
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write(diagram)
-            print(f"Sequence diagram saved to: {output_path}")
-        except Exception as e:
-            print(f"Error writing output file: {e}", file=sys.stderr)
-            sys.exit(1)
     else:
-        print(diagram)
+        diagrams_dir = Path('./diagrams')
+        diagrams_dir.mkdir(exist_ok=True)
+
+        session_id = trace_data.get('session_id', 'unknown')
+        output_path = diagrams_dir / f"sequence_{session_id}.md"
+
+    # Ensure output directory exists
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write the diagram
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(diagram)
+
+    # Output the path (this is what the user sees)
+    print(f"Sequence diagram saved to: {output_path}")
+
+    return 0
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    exit(main())
