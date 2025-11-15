@@ -168,6 +168,17 @@ async def get_session_status():
     }
 
 
+@app.get("/api/session/current")
+async def get_current_session():
+    """Get current active session ID."""
+    if not conversation_manager or not conversation_manager.trace:
+        return {"session_id": None}
+
+    return {
+        "session_id": conversation_manager.trace.session_id
+    }
+
+
 @app.post("/api/chat")
 async def chat_streaming(message: ChatMessage):
     """
@@ -261,6 +272,20 @@ async def list_sessions():
             with open(session_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
+            # Get total tokens from last token_usage event
+            total_tokens = 0
+            token_events = [
+                e for e in data.get("events", [])
+                if e.get("event_type") == "token_usage"
+            ]
+            if token_events:
+                last_event = token_events[-1]
+                cumulative = last_event.get("details", {}).get("cumulative", {})
+                total_tokens = (
+                    cumulative.get("total_input_tokens", 0) +
+                    cumulative.get("total_output_tokens", 0)
+                )
+
             sessions.append({
                 "id": data.get("session_id", session_file.stem),
                 "filename": session_file.name,
@@ -268,11 +293,7 @@ async def list_sessions():
                 "end_time": data.get("end_time"),
                 "model": data.get("model"),
                 "event_count": len(data.get("events", [])),
-                "total_tokens": sum(
-                    e.get("details", {}).get("cumulative", {}).get("total_input_tokens", 0)
-                    for e in data.get("events", [])
-                    if e.get("event_type") == "token_usage"
-                )
+                "total_tokens": total_tokens
             })
         except Exception as e:
             logger.error(f"Error reading session {session_file}: {e}")

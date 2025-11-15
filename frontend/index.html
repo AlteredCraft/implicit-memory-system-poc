@@ -11,6 +11,12 @@
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
+    <!-- Mermaid.js for Diagrams -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs';
+        window.mermaid = mermaid;
+    </script>
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/static/css/custom.css">
 </head>
@@ -70,14 +76,14 @@
 
                     <!-- Sessions Tab -->
                     <div class="tab-pane fade flex-grow-1 d-flex flex-column" id="sessions" role="tabpanel">
-                        <div class="p-3">
+                        <div class="p-3 d-flex flex-column h-100">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h5><i class="bi bi-journal-text"></i> Session History</h5>
                                 <button class="btn btn-sm btn-outline-primary" id="refreshSessions">
                                     <i class="bi bi-arrow-clockwise"></i> Refresh
                                 </button>
                             </div>
-                            <div id="sessionsList" class="list-group"></div>
+                            <div id="sessionsList" class="list-group flex-grow-1" style="max-height: calc(100vh - 250px); overflow-y: auto;"></div>
                         </div>
                     </div>
                 </div>
@@ -175,7 +181,7 @@
 
     <!-- Diagram Modal -->
     <div class="modal fade" id="diagramModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
+        <div class="modal-dialog modal-diagram">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="bi bi-diagram-3"></i> Sequence Diagram</h5>

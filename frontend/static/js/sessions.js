@@ -3,16 +3,23 @@
  */
 
 let currentSessions = [];
+let currentSessionId = null;
 
 /**
  * Refresh sessions list
  */
 async function refreshSessions() {
     try {
-        const response = await fetch(`${API_BASE}/api/sessions`);
-        const data = await response.json();
+        // Fetch sessions list
+        const sessionsResponse = await fetch(`${API_BASE}/api/sessions`);
+        const sessionsData = await sessionsResponse.json();
+        currentSessions = sessionsData.sessions || [];
 
-        currentSessions = data.sessions || [];
+        // Fetch current session ID
+        const currentResponse = await fetch(`${API_BASE}/api/session/current`);
+        const currentData = await currentResponse.json();
+        currentSessionId = currentData.session_id;
+
         renderSessionsList();
     } catch (error) {
         console.error('Failed to load sessions:', error);
@@ -45,13 +52,15 @@ function renderSessionsList() {
         const startTime = formatTimestamp(session.start_time);
         const endTime = session.end_time ? formatTimestamp(session.end_time) : 'In progress';
         const duration = calculateDuration(session.start_time, session.end_time);
+        const isActive = session.id === currentSessionId;
 
         return `
-            <div class="session-item list-group-item list-group-item-action">
+            <div class="session-item list-group-item list-group-item-action ${isActive ? 'border-primary' : ''}">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <div class="fw-bold mb-1">
                             <i class="bi bi-journal-text"></i> ${escapeHtml(session.id)}
+                            ${isActive ? '<span class="badge bg-success ms-2">Active</span>' : ''}
                         </div>
                         <div class="small text-muted mb-2">
                             <div><i class="bi bi-calendar"></i> ${startTime}</div>
@@ -67,7 +76,7 @@ function renderSessionsList() {
                                 <i class="bi bi-eye"></i> View Details
                             </button>
                             <button class="btn btn-outline-secondary generate-diagram-btn" data-id="${escapeHtml(session.id)}">
-                                <i class="bi bi-diagram-3"></i> Generate Diagram
+                                <i class="bi bi-diagram-3"></i> View Diagram
                             </button>
                         </div>
                     </div>
@@ -192,42 +201,52 @@ function renderEventsList(events) {
         let badgeClass = 'bg-secondary';
         let details = '';
 
+        // Ensure event.details exists
+        const eventDetails = event.details || {};
+
         switch (event.event_type) {
             case 'user_input':
                 icon = 'bi-person';
                 badgeClass = 'bg-primary';
-                details = `<div class="mt-1"><small><strong>Input:</strong> ${escapeHtml(event.details.message)}</small></div>`;
+                if (eventDetails.message) {
+                    details = `<div class="mt-1"><small><strong>Input:</strong> ${escapeHtml(eventDetails.message)}</small></div>`;
+                }
                 break;
             case 'llm_request':
                 icon = 'bi-send';
                 badgeClass = 'bg-info';
-                details = `<div class="mt-1"><small>Messages: ${event.details.messages_count} | Tools: ${event.details.tools.join(', ')}</small></div>`;
+                const tools = eventDetails.tools ? eventDetails.tools.join(', ') : 'none';
+                details = `<div class="mt-1"><small>Messages: ${eventDetails.messages_count || 0} | Tools: ${tools}</small></div>`;
                 break;
             case 'llm_response':
                 icon = 'bi-robot';
                 badgeClass = 'bg-success';
-                details = `<div class="mt-1"><small><strong>Response:</strong> ${escapeHtml(event.details.response)}</small></div>`;
+                if (eventDetails.response) {
+                    details = `<div class="mt-1"><small><strong>Response:</strong> ${escapeHtml(eventDetails.response)}</small></div>`;
+                }
                 break;
             case 'tool_call':
                 icon = 'bi-wrench';
                 badgeClass = 'bg-warning';
-                details = `<div class="mt-1"><small><code>${escapeHtml(JSON.stringify(event.details, null, 2))}</code></small></div>`;
+                details = `<div class="mt-1"><small><code>${escapeHtml(JSON.stringify(eventDetails, null, 2))}</code></small></div>`;
                 break;
             case 'tool_result':
                 icon = 'bi-check-circle';
                 badgeClass = 'bg-success';
-                details = `<div class="mt-1"><small>${escapeHtml(event.details.result)}</small></div>`;
+                if (eventDetails.result) {
+                    details = `<div class="mt-1"><small>${escapeHtml(eventDetails.result)}</small></div>`;
+                }
                 break;
             case 'token_usage':
                 icon = 'bi-speedometer2';
                 badgeClass = 'bg-info';
-                const usage = event.details.last_request;
-                details = `<div class="mt-1"><small>Input: ${usage.input_tokens} | Output: ${usage.output_tokens}</small></div>`;
+                const usage = eventDetails.last_request || {};
+                details = `<div class="mt-1"><small>Input: ${usage.input_tokens || 0} | Output: ${usage.output_tokens || 0}</small></div>`;
                 break;
             case 'error':
                 icon = 'bi-exclamation-triangle';
                 badgeClass = 'bg-danger';
-                details = `<div class="mt-1"><small><strong>${event.details.error_type}:</strong> ${escapeHtml(event.details.message)}</small></div>`;
+                details = `<div class="mt-1"><small><strong>${eventDetails.error_type || 'Error'}:</strong> ${escapeHtml(eventDetails.message || 'Unknown error')}</small></div>`;
                 break;
         }
 
@@ -256,9 +275,9 @@ async function generateDiagram(sessionId) {
     document.getElementById('diagramContent').innerHTML = `
         <div class="text-center p-5">
             <div class="spinner-border text-primary mb-3" role="status">
-                <span class="visually-hidden">Generating diagram...</span>
+                <span class="visually-hidden">Loading diagram...</span>
             </div>
-            <p>Generating Mermaid sequence diagram...</p>
+            <p>Loading Mermaid sequence diagram...</p>
         </div>
     `;
     modal.show();
@@ -274,31 +293,84 @@ async function generateDiagram(sessionId) {
 
         const data = await response.json();
 
-        // Display diagram
-        document.getElementById('diagramContent').innerHTML = `
-            <div class="alert alert-success mb-3">
-                <i class="bi bi-check-circle"></i> Diagram generated successfully!
-                <div class="small mt-1">Saved to: ${escapeHtml(data.diagram_file)}</div>
-            </div>
-            <div class="mb-2">
-                <button class="btn btn-sm btn-outline-primary" onclick="copyDiagramToClipboard()">
-                    <i class="bi bi-clipboard"></i> Copy Mermaid Code
-                </button>
-                <small class="text-muted ms-2">Paste into <a href="https://mermaid.live" target="_blank">mermaid.live</a> to visualize</small>
-            </div>
-            <pre id="diagramCode" class="border rounded p-3 bg-light" style="max-height: 500px; overflow-y: auto;">${escapeHtml(data.diagram)}</pre>
-        `;
-
         // Store diagram for clipboard copy
         window.currentDiagram = data.diagram;
+
+        // Extract mermaid code from markdown code fence
+        let mermaidCode = data.diagram;
+        const mermaidMatch = data.diagram.match(/```mermaid\n([\s\S]*?)\n```/);
+        if (mermaidMatch) {
+            mermaidCode = mermaidMatch[1].trim();
+        }
+
+        // Display diagram with Mermaid rendering
+        const diagramId = `mermaid-${Date.now()}`;
+        document.getElementById('diagramContent').innerHTML = `
+            <div class="mb-3">
+                <button class="btn btn-sm btn-outline-primary me-2" onclick="copyDiagramToClipboard()">
+                    <i class="bi bi-clipboard"></i> Copy Mermaid Code
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleDiagramSource()">
+                    <i class="bi bi-code"></i> <span id="toggleSourceText">Show Source</span>
+                </button>
+            </div>
+            <div id="renderedDiagram" class="border rounded p-3 bg-light" style="overflow-x: auto; min-width: 100%;">
+                <div class="mermaid" id="${diagramId}" style="width: 100%; min-height: 400px;">${escapeHtml(mermaidCode)}</div>
+            </div>
+            <pre id="diagramSource" class="border rounded p-3 bg-light mt-3" style="max-height: 400px; overflow-y: auto; display: none;">${escapeHtml(data.diagram)}</pre>
+        `;
+
+        // Initialize Mermaid and render the diagram
+        if (typeof mermaid !== 'undefined') {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'default',
+                sequence: {
+                    actorMargin: 80,
+                    boxMargin: 15,
+                    boxTextMargin: 10,
+                    noteMargin: 15,
+                    messageMargin: 50,
+                    mirrorActors: false,
+                    width: 250,
+                    height: 80,
+                    wrap: true,
+                    wrapPadding: 10,
+                    labelBoxWidth: 100,
+                    labelBoxHeight: 50,
+                    messageAlign: 'center'
+                },
+                maxTextSize: 90000
+            });
+
+            await mermaid.run({
+                nodes: [document.querySelector(`#${diagramId}`)]
+            });
+        }
 
     } catch (error) {
         console.error('Failed to generate diagram:', error);
         document.getElementById('diagramContent').innerHTML = `
             <div class="alert alert-danger">
-                <i class="bi bi-exclamation-triangle"></i> Failed to generate diagram: ${escapeHtml(error.message)}
+                <i class="bi bi-exclamation-triangle"></i> Failed to load diagram: ${escapeHtml(error.message)}
             </div>
         `;
+    }
+}
+
+/**
+ * Toggle diagram source code view
+ */
+function toggleDiagramSource() {
+    const source = document.getElementById('diagramSource');
+    const toggleText = document.getElementById('toggleSourceText');
+
+    if (source.style.display === 'none') {
+        source.style.display = 'block';
+        toggleText.textContent = 'Hide Source';
+    } else {
+        source.style.display = 'none';
+        toggleText.textContent = 'Show Source';
     }
 }
 
