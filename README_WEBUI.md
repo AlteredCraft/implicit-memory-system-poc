@@ -6,7 +6,7 @@ A modern web interface for Claude's autonomous memory management system, built w
 
 The Web UI provides a user-friendly alternative to the CLI with:
 
-- ✨ **Real-time streaming chat** - See Claude's responses appear token-by-token
+- ✨ **Chat interface** - Clean browser-based chat with Claude
 - 📁 **Memory browser** - Visual file explorer for Claude's memory files
 - 📊 **Sessions dashboard** - Browse all conversation sessions
 - 📈 **Diagram generation** - Generate Mermaid sequence diagrams with one click
@@ -93,11 +93,11 @@ Navigate to: **http://localhost:8000**
 Frontend (Browser)
   ├─ HTML/Bootstrap 5 UI
   ├─ Vanilla JavaScript
-  └─ HTTP Streaming (Server-Sent Events)
+  └─ HTTP with Server-Sent Events
          │
          ↓
 Backend (FastAPI)
-  ├─ HTTP Streaming Chat Endpoint
+  ├─ Chat API Endpoint
   ├─ Memory Operations API
   ├─ Sessions Management API
   └─ Reuses existing core logic:
@@ -108,7 +108,7 @@ Backend (FastAPI)
 
 ### Key Features
 
-- **HTTP Streaming**: Uses Server-Sent Events (SSE) for real-time response streaming
+- **HTTP Communication**: Uses Server-Sent Events (SSE) for response delivery
 - **Single-user POC**: No authentication, designed for local use
 - **Auto-recorded sessions**: All conversations automatically saved to `sessions/`
 - **Reuses 90% of CLI code**: `memory_tool.py` and `session_trace.py` unchanged
