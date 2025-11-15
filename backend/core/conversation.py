@@ -91,7 +91,6 @@ class ConversationManager:
         Yields JSON events:
         - {"type": "text", "data": "chunk of text"}
         - {"type": "tool_use", "data": {"tool": "view", "path": "/memories"}}
-        - {"type": "tool_result", "data": {"result": "..."}}
         - {"type": "done", "data": {"tokens": {...}}}
         """
         # Add user message
@@ -103,7 +102,14 @@ class ConversationManager:
         logger.debug(f"Sending message to LLM: {user_message[:100]}...")
 
         try:
-            # Use tool_runner with streaming
+            # Send initial processing indicator
+            yield {
+                "type": "thinking",
+                "data": "Processing..."
+            }
+
+            # Use tool_runner (executes synchronously but we yield results)
+            # Note: tool_runner doesn't support streaming, so we get the complete response
             runner = self.client.beta.messages.tool_runner(
                 model=self.model,
                 max_tokens=2048,
@@ -113,45 +119,27 @@ class ConversationManager:
                 betas=["context-management-2025-06-27"]
             )
 
-            # Stream events
+            # Get final response (this runs all tool calls automatically)
+            response = runner.until_done()
+
+            # Extract response text
             response_text = ""
-
-            async for event in runner.stream_async():
-                # Handle different event types
-                if hasattr(event, 'type'):
-                    event_type = event.type
-
-                    # Text delta from Claude
-                    if event_type == 'content_block_delta':
-                        if hasattr(event, 'delta') and hasattr(event.delta, 'text'):
-                            chunk = event.delta.text
-                            response_text += chunk
-                            yield {
-                                "type": "text",
-                                "data": chunk
-                            }
-
-                    # Tool use
-                    elif event_type == 'content_block_start':
-                        if hasattr(event, 'content_block'):
-                            block = event.content_block
-                            if hasattr(block, 'type') and block.type == 'tool_use':
-                                yield {
-                                    "type": "tool_use_start",
-                                    "data": {
-                                        "tool": block.name if hasattr(block, 'name') else "memory",
-                                        "id": block.id if hasattr(block, 'id') else ""
-                                    }
-                                }
-
-            # Get final response
-            response = await runner.until_done_async()
-
-            # Extract full response text
             for block in response.content:
                 if hasattr(block, 'text'):
                     response_text = block.text
                     break
+
+            # Simulate streaming by yielding the text in chunks
+            # This provides a better UX than returning all at once
+            chunk_size = 50  # characters per chunk
+            for i in range(0, len(response_text), chunk_size):
+                chunk = response_text[i:i + chunk_size]
+                yield {
+                    "type": "text",
+                    "data": chunk
+                }
+                # Small delay to simulate streaming (optional)
+                # await asyncio.sleep(0.01)
 
             # Add to messages
             self.messages.append({"role": "assistant", "content": response_text})

@@ -127,6 +127,11 @@ async function readStreamingResponse(response) {
  */
 function handleStreamEvent(event) {
     switch (event.type) {
+        case 'thinking':
+            // Show thinking indicator (typing animation already visible)
+            console.log('Claude is thinking...');
+            break;
+
         case 'text':
             // Append text chunk to current message
             appendToAssistantMessage(event.data);
