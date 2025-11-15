@@ -86,11 +86,11 @@ class ConversationManager:
 
     async def send_message_streaming(self, user_message: str) -> AsyncGenerator[dict, None]:
         """
-        Send a message to Claude and stream the response back.
+        Send a message to Claude and return the response.
 
         Yields JSON events:
-        - {"type": "text", "data": "chunk of text"}
-        - {"type": "tool_use", "data": {"tool": "view", "path": "/memories"}}
+        - {"type": "thinking", "data": "Processing..."}
+        - {"type": "text", "data": "complete response text"}
         - {"type": "done", "data": {"tokens": {...}}}
         """
         # Add user message
@@ -108,8 +108,7 @@ class ConversationManager:
                 "data": "Processing..."
             }
 
-            # Use tool_runner (executes synchronously but we yield results)
-            # Note: tool_runner doesn't support streaming, so we get the complete response
+            # Use tool_runner to get complete response (including all tool calls)
             runner = self.client.beta.messages.tool_runner(
                 model=self.model,
                 max_tokens=2048,
@@ -129,17 +128,11 @@ class ConversationManager:
                     response_text = block.text
                     break
 
-            # Simulate streaming by yielding the text in chunks
-            # This provides a better UX than returning all at once
-            chunk_size = 50  # characters per chunk
-            for i in range(0, len(response_text), chunk_size):
-                chunk = response_text[i:i + chunk_size]
-                yield {
-                    "type": "text",
-                    "data": chunk
-                }
-                # Small delay to simulate streaming (optional)
-                # await asyncio.sleep(0.01)
+            # Yield complete response
+            yield {
+                "type": "text",
+                "data": response_text
+            }
 
             # Add to messages
             self.messages.append({"role": "assistant", "content": response_text})
