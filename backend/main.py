@@ -212,7 +212,7 @@ async def chat_streaming(message: ChatMessage):
 
 @app.get("/api/memory/files")
 async def list_memory_files():
-    """List all memory files."""
+    """List all memory files with full metadata."""
     memory_dir = Path("memory/memories")
     if not memory_dir.exists():
         return {"files": []}
@@ -220,11 +220,15 @@ async def list_memory_files():
     files = []
     for file_path in memory_dir.rglob("*.txt"):
         relative_path = file_path.relative_to(memory_dir)
+        stat = file_path.stat()
+
         files.append({
             "path": str(relative_path),
             "name": file_path.name,
-            "size": file_path.stat().st_size,
-            "modified": file_path.stat().st_mtime
+            "size": stat.st_size,
+            "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+            "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+            "accessed": datetime.fromtimestamp(stat.st_atime).isoformat()
         })
 
     return {"files": files}

@@ -137,6 +137,14 @@ function handleStreamEvent(event) {
             appendToAssistantMessage(event.data);
             break;
 
+        case 'memory_operation':
+            // Handle memory operation event
+            const { operation, path, timestamp } = event.data;
+            if (typeof handleMemoryOperation === 'function') {
+                handleMemoryOperation(operation, path, timestamp);
+            }
+            break;
+
         case 'tool_use_start':
             // Show tool use indicator
             addToolUseIndicator(event.data.tool);

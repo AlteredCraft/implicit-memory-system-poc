@@ -109,6 +109,24 @@
                             <i class="bi bi-x"></i>
                         </button>
                     </div>
+
+                    <!-- HDD Lights Panel -->
+                    <div class="hdd-lights-panel">
+                        <div class="hdd-light read-light">
+                            <div class="light-indicator"></div>
+                            <span>READ</span>
+                        </div>
+                        <div class="hdd-light write-light">
+                            <div class="light-indicator"></div>
+                            <span>WRITE</span>
+                        </div>
+                    </div>
+
+                    <!-- Update Notification Banner -->
+                    <div id="updateNotificationBanner" style="display: none;" class="alert alert-info py-2 px-3 mb-2">
+                        <small>File was updated - <a href="#" onclick="reloadMemoryViewer(); return false;" class="alert-link">click to refresh</a></small>
+                    </div>
+
                     <pre id="memoryContent" class="border rounded p-2 bg-light small" style="max-height: 300px; overflow-y: auto;"></pre>
                 </div>
             </div>
