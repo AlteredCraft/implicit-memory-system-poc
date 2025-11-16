@@ -173,6 +173,9 @@ class ConversationManager:
                 "data": "Processing..."
             }
 
+            # Track message count before tool runner executes
+            messages_before_count = len(self.messages)
+
             # Use tool_runner to get complete response (including all tool calls)
             runner = self.client.beta.messages.tool_runner(
                 model=self.model,
@@ -186,8 +189,9 @@ class ConversationManager:
             # Get final response (this runs all tool calls automatically)
             response = runner.until_done()
 
-            # Extract and emit memory operations
-            memory_operations = self._extract_memory_operations(runner.messages)
+            # Extract and emit memory operations from new messages added during tool runner execution
+            new_messages = self.messages[messages_before_count:]
+            memory_operations = self._extract_memory_operations(new_messages)
             for operation in memory_operations:
                 yield {
                     "type": "memory_operation",
