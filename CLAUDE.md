@@ -17,11 +17,10 @@ This is a **Next.js/TypeScript project**
 
 ```bash
 # Setup
-cd nextjs-frontend && npm install  # Install Next.js dependencies
+npm install  # Install dependencies
 
 # Run Next.js Full-Stack App (RECOMMENDED - Standalone)
 ./run_nextjs_standalone.sh       # Starts Next.js dev server on http://localhost:3000
-
 
 # Generate Sequence Diagrams (now built into Next.js API)
 # Accessible via Web UI or API: POST /api/sessions/{id}/diagram
@@ -33,7 +32,7 @@ cd nextjs-frontend && npm install  # Install Next.js dependencies
 
 The Next.js app stores API keys in **browser localStorage** (single-user POC). Server-side environment variables are optional and only used for defaults.
 
-Create `nextjs-frontend/.env` if you want server-side defaults:
+Create `.env` if you want server-side defaults:
 
 ```bash
 # Optional - API key can be entered in web UI instead
@@ -76,9 +75,8 @@ Create `nextjs-frontend/.env` if you want server-side defaults:
 ### Directory Structure
 
 ```
-nextjs-frontend/     # Next.js Full-Stack App (TypeScript)
-  app/
-    api/             # Next.js API Routes (backend logic)
+app/
+  api/               # Next.js API Routes (backend logic)
       chat/          # SSE streaming chat endpoint
       session/       # Session management
       memory/        # Memory file operations
@@ -86,26 +84,29 @@ nextjs-frontend/     # Next.js Full-Stack App (TypeScript)
       prompts/       # Prompt management
       health/        # Health check
       config/        # Configuration
-    page.tsx         # Main application page
-    layout.tsx       # Root layout
-    globals.css      # Global styles with custom animations
-  components/
-    Chat.tsx         # Chat UI with SSE handling
-    MemoryBrowser.tsx  # Memory file browser with animations
-    Sessions.tsx     # Session history & diagram generation
-    SettingsModal.tsx  # Configuration modal
-  lib/
-    api.ts           # API client functions (frontend)
-    utils.ts         # Utility functions
-    server/          # Server-side modules (backend logic)
-      conversation-manager.ts  # ConversationManager
-      memory-tool.ts           # LocalFilesystemMemoryTool
-      session-trace.ts         # Session recording
-      sequence-diagram.ts      # Diagram generation
-      prompts.ts               # Prompt loading
-      global-state.ts          # Global state management
-  types/
-    index.ts         # TypeScript type definitions
+  page.tsx           # Main application page
+  layout.tsx         # Root layout
+  globals.css        # Global styles with custom animations
+
+components/
+  Chat.tsx           # Chat UI with SSE handling
+  MemoryBrowser.tsx  # Memory file browser with animations
+  Sessions.tsx       # Session history & diagram generation
+  SettingsModal.tsx  # Configuration modal
+
+lib/
+  api.ts             # API client functions (frontend)
+  utils.ts           # Utility functions
+  server/            # Server-side modules (backend logic)
+    conversation-manager.ts  # ConversationManager
+    memory-tool.ts           # LocalFilesystemMemoryTool
+    session-trace.ts         # Session recording
+    sequence-diagram.ts      # Diagram generation
+    prompts.ts               # Prompt loading
+    global-state.ts          # Global state management
+
+types/
+  index.ts           # TypeScript type definitions
 
 prompts/             # System prompt templates
 memory/memories/     # Active memory storage (gitignored)
@@ -150,7 +151,7 @@ All endpoints follow REST pattern: `/api/{resource}/{action}`
 
 ## Important Technical Details
 
-### ConversationManager (`nextjs-frontend/lib/server/conversation-manager.ts`)
+### ConversationManager (`lib/server/conversation-manager.ts`)
 
 Central coordinator for message handling (server-side TypeScript):
 - Manages conversation history with Claude
@@ -159,7 +160,7 @@ Central coordinator for message handling (server-side TypeScript):
 - Tracks token usage (cumulative and per-request)
 - Uses Anthropic TypeScript SDK with beta features
 
-### LocalFilesystemMemoryTool (`nextjs-frontend/lib/server/memory-tool.ts`)
+### LocalFilesystemMemoryTool (`lib/server/memory-tool.ts`)
 
 File-based memory storage implementation (server-side TypeScript):
 - Storage location: `./memory/memories/`
@@ -190,12 +191,3 @@ Configurable via environment:
 - `APP_LOG_LEVEL` - Application logs (default: INFO)
 - `DEPENDENCIES_LOG_LEVEL` - Library logs (default: WARNING)
 - Prefixes: `[MEMORY]`, `[TRACE]` for component identification
-
-## CLI Commands
-
-When running `uv run src/chat.py`:
-- `/quit` - Exit
-- `/memory_view` - View stored memories
-- `/clear` - Clear all memories
-- `/debug` - Toggle debug logging
-- `/dump` - Display context window

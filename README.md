@@ -19,10 +19,9 @@
 
 ```bash
 # 1. Install dependencies
-cd nextjs-frontend
 npm install
 
-# 2. Configure your API key
+# 2. Configure your API key (optional - can also set in UI)
 cp .env.example .env
 # Edit .env and add your ANTHROPIC_API_KEY
 
@@ -98,23 +97,32 @@ See [CLAUDE.md](CLAUDE.md) for detailed architecture documentation.
 ## 📁 Project Structure
 
 ```
-nextjs-frontend/          # Main application
-├── app/
-│   ├── api/             # Next.js API Routes (backend)
-│   │   ├── chat/        # SSE streaming endpoint
-│   │   ├── session/     # Session management
-│   │   ├── memory/      # Memory operations
-│   │   └── sessions/    # History & diagrams
-│   ├── page.tsx         # Main UI
-│   └── components/      # React components
-├── lib/
-│   ├── api.ts           # Frontend API client
-│   └── server/          # Backend modules
-│       ├── conversation-manager.ts
-│       ├── memory-tool.ts
-│       ├── session-trace.ts
-│       └── sequence-diagram.ts
-└── .env                 # Configuration (API key)
+app/
+├── api/                 # Next.js API Routes (backend)
+│   ├── chat/            # SSE streaming endpoint
+│   ├── session/         # Session management
+│   ├── memory/          # Memory operations
+│   └── sessions/        # History & diagrams
+├── page.tsx             # Main UI
+├── layout.tsx           # Root layout
+└── globals.css          # Global styles with animations
+
+components/              # React components
+├── Chat.tsx             # Chat UI with SSE handling
+├── MemoryBrowser.tsx    # Memory file browser
+├── Sessions.tsx         # Session history
+└── SettingsModal.tsx    # Configuration modal
+
+lib/
+├── api.ts               # Frontend API client
+├── utils.ts             # Utility functions
+└── server/              # Backend modules
+    ├── conversation-manager.ts
+    ├── memory-tool.ts
+    ├── session-trace.ts
+    └── sequence-diagram.ts
+
+types/                   # TypeScript type definitions
 
 prompts/                 # System prompt templates
 memory/memories/         # Active memory storage (gitignored)
@@ -147,7 +155,7 @@ prompts/
 
 ### Environment Variables
 
-Create `nextjs-frontend/.env`:
+Create `.env` in the root directory:
 
 ```bash
 # Your Anthropic API key (required)
@@ -203,20 +211,17 @@ Diagrams show:
 
 ### Local Development
 ```bash
-cd nextjs-frontend
 npm run dev  # http://localhost:3000
 ```
 
 ### Production Build
 ```bash
-cd nextjs-frontend
 npm run build
 npm run start  # Production server
 ```
 
 ### Deploy to Vercel
 ```bash
-cd nextjs-frontend
 vercel deploy
 ```
 
@@ -226,60 +231,6 @@ vercel deploy
 - Client-side API key storage (localStorage)
 
 For production use, add proper auth and secure key management. See [Anthropic's security guidelines](https://docs.claude.com/en/docs/agents-and-tools/tool-use/memory-tool#security).
-
----
-
-## Project Structure
-
-```
-app/
-  page.tsx         # Main application page
-  layout.tsx       # Root layout
-  globals.css      # Global styles with custom animations
-
-components/
-  Chat.tsx         # Chat UI with SSE handling
-  MemoryBrowser.tsx  # Memory file browser
-  Sessions.tsx     # Session management
-  SettingsModal.tsx  # Configuration modal
-
-lib/
-  api.ts           # API client functions
-  utils.ts         # Utility functions
-
-types/
-  index.ts         # TypeScript type definitions
-```
-
-## Configuration
-
-The application stores configuration in browser LocalStorage:
-- `anthropic_api_key`: Your Anthropic API key
-- `anthropic_model`: Selected Claude model
-- `system_prompt_file`: Selected system prompt
-
-## API Integration
-
-All API calls go to the FastAPI backend running on port 8888:
-- Session initialization
-- Chat streaming (SSE)
-- Memory file operations
-- Session history and diagrams
-
-## Custom Animations
-
-The application includes custom Tailwind CSS animations for:
-- File creation (slide-in)
-- File access (green glow)
-- File updates (orange glow)
-- HDD activity lights (flicker effect)
-
-## Tech Stack
-
-- **Next.js 16**: React framework
-- **TypeScript**: Type-safe development
-- **Tailwind CSS**: Utility-first styling
-- **clsx + tailwind-merge**: Dynamic class composition
 
 ---
 

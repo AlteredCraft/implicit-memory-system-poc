@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as fs from 'fs';
 import * as path from 'path';
 import { generateMermaidDiagram } from '@/lib/server/sequence-diagram';
+import { findSessionFileById } from '@/lib/server/session-utils';
 
 export async function POST(
   request: NextRequest,
@@ -11,21 +12,7 @@ export async function POST(
   const sessionsDir = path.join(process.cwd(), 'sessions');
 
   // Find session file by ID
-  const files = fs.readdirSync(sessionsDir);
-  let sessionFile: string | null = null;
-
-  for (const file of files) {
-    if (file.startsWith('session_') && file.endsWith('.json')) {
-      const filePath = path.join(sessionsDir, file);
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const data = JSON.parse(content);
-
-      if (data.session_id === id) {
-        sessionFile = filePath;
-        break;
-      }
-    }
-  }
+  const sessionFile = findSessionFileById(id);
 
   if (!sessionFile) {
     return NextResponse.json(

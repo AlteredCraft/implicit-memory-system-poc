@@ -1,7 +1,5 @@
 // API utility functions for Memory System v2
 
-// Use Next.js API routes (which proxy to FastAPI backend)
-// This avoids CORS issues and keeps backend URL server-side
 const API_BASE = '';
 
 export const api = {
