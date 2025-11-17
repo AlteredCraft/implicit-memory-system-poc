@@ -104,6 +104,24 @@ export default function MemoryBrowser({ onRefreshTrigger }: MemoryBrowserProps) 
 
           case 'read':
             await refreshMemoryFiles();
+            // Mark file with read operation for animation
+            setMemoryFiles((prev) =>
+              prev.map((f) =>
+                f.path === event.path
+                  ? { ...f, lastOperation: 'read', operationTimestamp: event.timestamp }
+                  : f
+              )
+            );
+            // Clear animation after it completes (1 second)
+            setTimeout(() => {
+              setMemoryFiles((prev) =>
+                prev.map((f) =>
+                  f.path === event.path && f.lastOperation === 'read'
+                    ? { ...f, lastOperation: undefined }
+                    : f
+                )
+              );
+            }, 1000);
             if (selectedFile?.path === event.path) {
               triggerHDDLight('read');
             }
@@ -118,6 +136,16 @@ export default function MemoryBrowser({ onRefreshTrigger }: MemoryBrowserProps) 
                   : f
               )
             );
+            // Clear animation after it completes (1 second)
+            setTimeout(() => {
+              setMemoryFiles((prev) =>
+                prev.map((f) =>
+                  f.path === event.path && f.lastOperation === 'update'
+                    ? { ...f, lastOperation: undefined }
+                    : f
+                )
+              );
+            }, 1000);
             if (selectedFile?.path === event.path) {
               setShowUpdateBanner(true);
               triggerHDDLight('write');
