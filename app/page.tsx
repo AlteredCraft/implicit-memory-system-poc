@@ -7,7 +7,8 @@ import Sessions from '@/components/Sessions';
 import SettingsModal from '@/components/SettingsModal';
 import { api } from '@/lib/api';
 import { storage } from '@/lib/utils';
-import { SystemPrompt, MemoryOperationEvent } from '@/types';
+import { SystemPrompt } from '@/types';
+import { MemoryProvider } from '@/lib/contexts/MemoryContext';
 
 export default function Home() {
   const [sessionActive, setSessionActive] = useState(false);
@@ -18,7 +19,6 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'not-initialized' | 'initializing' | 'connected' | 'error'>('not-initialized');
   const [activeTab, setActiveTab] = useState<'chat' | 'sessions'>('chat');
-  const [memoryRefreshTrigger, setMemoryRefreshTrigger] = useState(0);
 
   useEffect(() => {
     // Load settings from localStorage
@@ -85,16 +85,6 @@ export default function Home() {
     setShowSettings(false);
   };
 
-  const handleMemoryOperation = (event: MemoryOperationEvent) => {
-    // Trigger memory browser refresh by incrementing the trigger
-    setMemoryRefreshTrigger((prev) => prev + 1);
-
-    // Also pass to global handler for MemoryBrowser component
-    if (typeof window !== 'undefined' && (window as any).handleMemoryOperationFromChat) {
-      (window as any).handleMemoryOperationFromChat(event);
-    }
-  };
-
   const getStatusBadge = () => {
     switch (connectionStatus) {
       case 'not-initialized':
@@ -129,9 +119,10 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* Top Navigation Bar */}
-      <nav className="bg-gray-900 text-white shadow-lg flex-shrink-0">
+    <MemoryProvider>
+      <div className="flex flex-col h-screen">
+        {/* Top Navigation Bar */}
+        <nav className="bg-gray-900 text-white shadow-lg flex-shrink-0">
         <div className="px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 16 16">
@@ -195,7 +186,7 @@ export default function Home() {
           {/* Tab Content */}
           <div className="flex-1 overflow-hidden">
             {activeTab === 'chat' ? (
-              <Chat sessionActive={sessionActive} onMemoryOperation={handleMemoryOperation} />
+              <Chat sessionActive={sessionActive} />
             ) : (
               <Sessions />
             )}
@@ -204,7 +195,7 @@ export default function Home() {
 
         {/* Right Panel: Memory Browser */}
         <div className="w-96 flex-shrink-0">
-          <MemoryBrowser onRefreshTrigger={memoryRefreshTrigger} />
+          <MemoryBrowser />
         </div>
       </div>
 
@@ -249,16 +240,17 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Settings Modal */}
-      <SettingsModal
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-        onSave={handleSaveSettings}
-        availablePrompts={availablePrompts}
-        currentApiKey={apiKey}
-        currentModel={model}
-        currentPromptFile={systemPromptFile}
-      />
-    </div>
+        {/* Settings Modal */}
+        <SettingsModal
+          isOpen={showSettings}
+          onClose={() => setShowSettings(false)}
+          onSave={handleSaveSettings}
+          availablePrompts={availablePrompts}
+          currentApiKey={apiKey}
+          currentModel={model}
+          currentPromptFile={systemPromptFile}
+        />
+      </div>
+    </MemoryProvider>
   );
 }
