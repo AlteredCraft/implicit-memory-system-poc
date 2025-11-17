@@ -1,11 +1,10 @@
 #!/bin/bash
-# Run the standalone Next.js application (no Python backend needed)
 
-echo "🚀 Starting Memory System v2 - Next.js Standalone"
+
+echo "🚀 Starting Memory System v2 - Next.js"
 echo "=================================================="
 echo ""
 echo "The Next.js application includes both frontend and backend."
-echo "No separate Python FastAPI server is needed."
 echo ""
 
 # Check if .env exists in nextjs-frontend

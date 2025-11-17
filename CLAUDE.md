@@ -7,14 +7,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Memory System v2** - A demonstration application for Claude's autonomous memory management using Anthropic's Memory Tool. Claude decides what to remember without explicit user commands, showcasing the evolution from explicit commands to implicit trust.
 
 - **Related Article**: https://alteredcraft.com/p/the-memory-illusion-teaching-your
-- **Two Interfaces**: Next.js Full-Stack App (recommended) and CLI (legacy Python)
 - **Memory Storage**: Plain text files in `./memory/memories/` for transparency
 - **Session Recording**: All interactions traced to `./sessions/` as JSON
 - **Architecture**: Single-user POC (not production-ready - no auth, global state)
 
 ## Development Commands
 
-This is a **Next.js/TypeScript project** with optional legacy Python CLI support.
+This is a **Next.js/TypeScript project**
 
 ```bash
 # Setup
@@ -22,29 +21,11 @@ cd nextjs-frontend && npm install  # Install Next.js dependencies
 
 # Run Next.js Full-Stack App (RECOMMENDED - Standalone)
 ./run_nextjs_standalone.sh       # Starts Next.js dev server on http://localhost:3000
-# This includes both frontend and backend - no Python required!
 
-# Alternative: Legacy Python CLI (requires Python/UV)
-uv sync                          # Install Python dependencies (if needed)
-uv run src/chat.py               # Interactive terminal chat
 
 # Generate Sequence Diagrams (now built into Next.js API)
 # Accessible via Web UI or API: POST /api/sessions/{id}/diagram
 ```
-
-## Legacy Python CLI (Optional)
-
-The `src/` directory contains a legacy Python CLI interface that can be used as an alternative to the web UI:
-
-```bash
-# Install Python dependencies (requires Python 3.11+, UV package manager)
-uv sync
-
-# Run CLI
-uv run src/chat.py
-```
-
-The CLI uses the same prompts and storage directories but doesn't have all the web UI features.
 
 ## Configuration
 
@@ -91,10 +72,6 @@ Create `nextjs-frontend/.env` if you want server-side defaults:
 - **Port**: http://localhost:3000 (single dev server)
 - **All-in-One**: No separate backend server needed
 
-**Legacy Python CLI** (Optional):
-- Terminal-based interface using Python
-- Direct Anthropic API integration
-- Uses same prompts and storage directories
 
 ### Directory Structure
 
@@ -134,10 +111,6 @@ prompts/             # System prompt templates
 memory/memories/     # Active memory storage (gitignored)
 sessions/            # Session trace JSON files (gitignored)
 
-# Legacy Python code (deprecated, kept for reference)
-backend/             # Old FastAPI backend (not needed)
-frontend/            # Old Vanilla JS frontend (not needed)
-src/                 # Old Python CLI (still works if needed)
 ```
 
 ### Key Architectural Patterns

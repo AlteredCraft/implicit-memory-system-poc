@@ -198,28 +198,6 @@ Diagrams show:
 
 ---
 
-## 🐍 Optional: Python CLI
-
-A legacy Python CLI is available if you prefer terminal-based interaction:
-
-```bash
-# Install Python dependencies (requires Python 3.11+)
-uv sync
-
-# Run CLI
-uv run src/chat.py
-```
-
-**CLI Commands:**
-- `/quit` - Exit
-- `/memory_view` - View all memories
-- `/clear` - Clear all memories
-- `/debug` - Toggle debug logging
-- `/dump` - Display context window
-
-**Note:** The Next.js web app is the recommended interface. The CLI uses the same prompts and storage directories but doesn't have all the web UI features.
-
----
 
 ## 🚢 Deployment
 
@@ -278,7 +256,6 @@ For production use, add proper auth and secure key management. See [Anthropic's 
 
 - **Article:** [The Memory Illusion v2: From Explicit Commands to Implicit Trust](https://alteredcraft.com/p/the-memory-illusion-teaching-your)
 - **Anthropic Docs:** [Memory Tool](https://docs.claude.com/en/docs/agents-and-tools/tool-use/memory-tool)
-- **Migration Guide:** [MIGRATION.md](MIGRATION.md) - How we moved from Python to Next.js
 - **Architecture Details:** [CLAUDE.md](CLAUDE.md) - Comprehensive technical documentation
 - **Original v1:** [simple_llm_memory_poc](https://github.com/AlteredCraft/simple_llm_memory_poc)
 
