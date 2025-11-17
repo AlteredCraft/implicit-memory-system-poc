@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const sessionsDir = path.join(process.cwd(), '..', 'sessions');
+  const sessionsDir = path.join(process.cwd(), 'sessions');
 
   // Find session file by ID
   const files = fs.readdirSync(sessionsDir);

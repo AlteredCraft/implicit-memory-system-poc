@@ -14,9 +14,8 @@ node_modules/
 /coverage
 
 # next.js
-.next/
-# @TODO change to /out/ after app uplevel
-out/
+/.next/
+/out/
 
 # production
 /build
@@ -43,6 +42,5 @@ yarn-error.log*
 next-env.d.ts
 
 ## App specific
-# @TODO change to /sessions/ after app uplevel
-sessions/
+/sessions/
 /memory/

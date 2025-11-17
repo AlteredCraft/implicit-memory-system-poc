@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ name: string }> }
 ) {
   const { name } = await params;
-  const promptFile = path.join(process.cwd(), '..', 'prompts', `${name}.txt`);
+  const promptFile = path.join(process.cwd(), 'prompts', `${name}.txt`);
 
   if (!fs.existsSync(promptFile)) {
     return NextResponse.json(

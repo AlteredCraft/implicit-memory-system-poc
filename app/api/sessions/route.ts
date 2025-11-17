@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export async function GET() {
-  const sessionsDir = path.join(process.cwd(), '..', 'sessions');
+  const sessionsDir = path.join(process.cwd(), 'sessions');
 
   if (!fs.existsSync(sessionsDir)) {
     return NextResponse.json({ sessions: [] });

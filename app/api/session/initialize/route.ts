@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     // Load system prompt
     let systemPrompt: string;
     try {
-      const promptPath = path.join(process.cwd(), '..', body.system_prompt_file);
+      const promptPath = path.join(process.cwd(), body.system_prompt_file);
       systemPrompt = loadSystemPrompt(promptPath);
     } catch (error: any) {
       return NextResponse.json(

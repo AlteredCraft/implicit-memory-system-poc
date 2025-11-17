@@ -229,6 +229,60 @@ For production use, add proper auth and secure key management. See [Anthropic's 
 
 ---
 
+## Project Structure
+
+```
+app/
+  page.tsx         # Main application page
+  layout.tsx       # Root layout
+  globals.css      # Global styles with custom animations
+
+components/
+  Chat.tsx         # Chat UI with SSE handling
+  MemoryBrowser.tsx  # Memory file browser
+  Sessions.tsx     # Session management
+  SettingsModal.tsx  # Configuration modal
+
+lib/
+  api.ts           # API client functions
+  utils.ts         # Utility functions
+
+types/
+  index.ts         # TypeScript type definitions
+```
+
+## Configuration
+
+The application stores configuration in browser LocalStorage:
+- `anthropic_api_key`: Your Anthropic API key
+- `anthropic_model`: Selected Claude model
+- `system_prompt_file`: Selected system prompt
+
+## API Integration
+
+All API calls go to the FastAPI backend running on port 8888:
+- Session initialization
+- Chat streaming (SSE)
+- Memory file operations
+- Session history and diagrams
+
+## Custom Animations
+
+The application includes custom Tailwind CSS animations for:
+- File creation (slide-in)
+- File access (green glow)
+- File updates (orange glow)
+- HDD activity lights (flicker effect)
+
+## Tech Stack
+
+- **Next.js 16**: React framework
+- **TypeScript**: Type-safe development
+- **Tailwind CSS**: Utility-first styling
+- **clsx + tailwind-merge**: Dynamic class composition
+
+---
+
 ## 🔍 Troubleshooting
 
 **Claude isn't remembering things?**
@@ -259,17 +313,6 @@ For production use, add proper auth and secure key management. See [Anthropic's 
 - **Architecture Details:** [CLAUDE.md](CLAUDE.md) - Comprehensive technical documentation
 - **Original v1:** [simple_llm_memory_poc](https://github.com/AlteredCraft/simple_llm_memory_poc)
 
----
-
-## 🤝 Contributing
-
-This is a demonstration project, but improvements are welcome!
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
 
 ---
 

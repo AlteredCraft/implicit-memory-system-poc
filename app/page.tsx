@@ -223,7 +223,7 @@ export default function Home() {
               </div>
               <span className="text-gray-400 hidden md:inline">|</span>
               <small className="text-gray-400 hidden md:inline">
-                Companion app for{' '}
+                Research app for{' '}
                 <a
                   href="https://alteredcraft.com/"
                   target="_blank"
