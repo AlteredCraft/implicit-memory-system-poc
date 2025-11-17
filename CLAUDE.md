@@ -7,48 +7,63 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Memory System v2** - A demonstration application for Claude's autonomous memory management using Anthropic's Memory Tool. Claude decides what to remember without explicit user commands, showcasing the evolution from explicit commands to implicit trust.
 
 - **Related Article**: https://alteredcraft.com/p/the-memory-illusion-teaching-your
-- **Three Interfaces**: Next.js Web UI (recommended), Vanilla JS Web UI, and CLI
+- **Two Interfaces**: Next.js Full-Stack App (recommended) and CLI (legacy Python)
 - **Memory Storage**: Plain text files in `./memory/memories/` for transparency
 - **Session Recording**: All interactions traced to `./sessions/` as JSON
 - **Architecture**: Single-user POC (not production-ready - no auth, global state)
 
 ## Development Commands
 
-This is a **Python project using UV package manager** (not npm). However, the Next.js frontend requires Node.js/npm.
+This is a **Next.js/TypeScript project** with optional legacy Python CLI support.
 
 ```bash
 # Setup
-uv sync                          # Install Python dependencies
 cd nextjs-frontend && npm install  # Install Next.js dependencies
 
-# Run Next.js Web UI (Recommended Interface)
-./run_nextjs.sh                  # Starts Next.js dev server on http://localhost:3000
-# Note: FastAPI backend must be running first (see below)
+# Run Next.js Full-Stack App (RECOMMENDED - Standalone)
+./run_nextjs_standalone.sh       # Starts Next.js dev server on http://localhost:3000
+# This includes both frontend and backend - no Python required!
 
-# Run FastAPI Backend (Required for Next.js)
-./run_webui.sh                   # Starts FastAPI server on http://localhost:8888
-# Or manually:
-uv run uvicorn backend.main:app --host 0.0.0.0 --port 8888 --reload
+# Alternative: Legacy Python CLI (requires Python/UV)
+uv sync                          # Install Python dependencies (if needed)
+uv run src/chat.py               # Interactive terminal chat
 
-# Run Vanilla JS Web UI (Alternative Interface)
-./run_webui.sh                   # Starts FastAPI server with vanilla JS frontend on http://localhost:8888
-
-# Run CLI (Alternative Interface)
-uv run src/chat.py              # Interactive terminal chat
-
-# Generate Sequence Diagrams
-uv run scripts/generate_sequence_diagram.py sessions/session_*.json
+# Generate Sequence Diagrams (now built into Next.js API)
+# Accessible via Web UI or API: POST /api/sessions/{id}/diagram
 ```
+
+## Legacy Python CLI (Optional)
+
+The `src/` directory contains a legacy Python CLI interface that can be used as an alternative to the web UI:
+
+```bash
+# Install Python dependencies (requires Python 3.11+, UV package manager)
+uv sync
+
+# Run CLI
+uv run src/chat.py
+```
+
+The CLI uses the same prompts and storage directories but doesn't have all the web UI features.
 
 ## Configuration
 
-### Required Environment Variables (.env)
+### Environment Variables (Optional)
+
+The Next.js app stores API keys in **browser localStorage** (single-user POC). Server-side environment variables are optional and only used for defaults.
+
+Create `nextjs-frontend/.env` if you want server-side defaults:
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...        # Required
-ANTHROPIC_MODEL=claude-sonnet-4-5-20250929  # Optional, defaults to this model
-APP_LOG_LEVEL=INFO                   # DEBUG|INFO|WARNING|ERROR
-DEPENDENCIES_LOG_LEVEL=WARNING       # Control library verbosity
+# Optional - API key can be entered in web UI instead
+# ANTHROPIC_API_KEY=sk-ant-...
+
+# Optional - defaults to claude-sonnet-4-5-20250929
+# ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+
+# Optional - logging levels
+# APP_LOG_LEVEL=INFO
+# DEPENDENCIES_LOG_LEVEL=WARNING
 ```
 
 ### System Prompts
@@ -67,36 +82,33 @@ DEPENDENCIES_LOG_LEVEL=WARNING       # Control library verbosity
 
 ## Architecture & Code Organization
 
-### Multi-Interface Architecture
+### Current Architecture
 
-Three operating modes sharing core logic:
+**Next.js Full-Stack Application** (Recommended):
+- **Frontend**: Next.js 16 with TypeScript and Tailwind CSS
+- **Backend**: Next.js API Routes (server-side TypeScript)
+- **Communication**: Server-Sent Events (SSE) for streaming responses
+- **Port**: http://localhost:3000 (single dev server)
+- **All-in-One**: No separate backend server needed
 
-1. **Next.js Web UI** (Recommended)
-   - Backend: FastAPI serving REST API
-   - Frontend: Next.js 16 with TypeScript and Tailwind CSS
-   - Communication: Server-Sent Events (SSE) for streaming responses
-   - Port: http://localhost:3000 (dev server)
-
-2. **Vanilla JS Web UI** (Alternative)
-   - Backend: FastAPI serving REST API + static files
-   - Frontend: Vanilla JavaScript SPA (no build process, ~1000 LOC)
-   - Communication: Server-Sent Events (SSE) for streaming responses
-   - Port: http://localhost:8888
-
-3. **CLI** (Alternative)
-   - Terminal-based interface with same core functionality
-   - Direct Anthropic API integration
+**Legacy Python CLI** (Optional):
+- Terminal-based interface using Python
+- Direct Anthropic API integration
+- Uses same prompts and storage directories
 
 ### Directory Structure
 
 ```
-backend/              # FastAPI application
-  main.py            # All API endpoints, SSE streaming setup
-  core/
-    conversation.py  # ConversationManager - coordinates messages & tools
-
-nextjs-frontend/     # Next.js Web UI (TypeScript + Tailwind CSS)
+nextjs-frontend/     # Next.js Full-Stack App (TypeScript)
   app/
+    api/             # Next.js API Routes (backend logic)
+      chat/          # SSE streaming chat endpoint
+      session/       # Session management
+      memory/        # Memory file operations
+      sessions/      # Session history & diagrams
+      prompts/       # Prompt management
+      health/        # Health check
+      config/        # Configuration
     page.tsx         # Main application page
     layout.tsx       # Root layout
     globals.css      # Global styles with custom animations
@@ -106,28 +118,26 @@ nextjs-frontend/     # Next.js Web UI (TypeScript + Tailwind CSS)
     Sessions.tsx     # Session history & diagram generation
     SettingsModal.tsx  # Configuration modal
   lib/
-    api.ts           # API client functions
+    api.ts           # API client functions (frontend)
     utils.ts         # Utility functions
+    server/          # Server-side modules (backend logic)
+      conversation-manager.ts  # ConversationManager
+      memory-tool.ts           # LocalFilesystemMemoryTool
+      session-trace.ts         # Session recording
+      sequence-diagram.ts      # Diagram generation
+      prompts.ts               # Prompt loading
+      global-state.ts          # Global state management
   types/
     index.ts         # TypeScript type definitions
-
-frontend/            # Vanilla JS Web UI (Bootstrap 5)
-  index.html         # Single-page application
-  static/js/         # No framework, no build process
-    app.js           # App initialization
-    chat.js          # Chat UI & SSE handling
-    memory.js        # Memory file browser
-    sessions.js      # Session history & diagram generation
-
-src/                 # Shared core modules (used by both CLI and backend)
-  memory_tool.py     # LocalFilesystemMemoryTool implementation
-  session_trace.py   # Session recording system
-  chat.py            # CLI implementation
 
 prompts/             # System prompt templates
 memory/memories/     # Active memory storage (gitignored)
 sessions/            # Session trace JSON files (gitignored)
-diagrams/            # Generated Mermaid diagrams (gitignored)
+
+# Legacy Python code (deprecated, kept for reference)
+backend/             # Old FastAPI backend (not needed)
+frontend/            # Old Vanilla JS frontend (not needed)
+src/                 # Old Python CLI (still works if needed)
 ```
 
 ### Key Architectural Patterns
@@ -167,34 +177,39 @@ All endpoints follow REST pattern: `/api/{resource}/{action}`
 
 ## Important Technical Details
 
-### ConversationManager (`backend/core/conversation.py`)
+### ConversationManager (`nextjs-frontend/lib/server/conversation-manager.ts`)
 
-Central coordinator for message handling:
+Central coordinator for message handling (server-side TypeScript):
 - Manages conversation history with Claude
 - Integrates MemoryTool and SessionTrace
-- Handles streaming responses
+- Handles streaming responses via async generators
 - Tracks token usage (cumulative and per-request)
+- Uses Anthropic TypeScript SDK with beta features
 
-### LocalFilesystemMemoryTool (`src/memory_tool.py`)
+### LocalFilesystemMemoryTool (`nextjs-frontend/lib/server/memory-tool.ts`)
 
-- File-based memory storage in `./memory/memories/`
-- Security: Path traversal protection via `_validate_path()`
+File-based memory storage implementation (server-side TypeScript):
+- Storage location: `./memory/memories/`
+- Security: Path traversal protection via `_validatePath()`
 - All operations logged to session trace
 - Supports: view, create, str_replace, insert, delete, rename
+- Custom tool implementation (not using AbstractMemoryTool base class)
 
-### Frontend Stacks
+### Technology Stack
 
-**Next.js Frontend (Recommended):**
+**Frontend:**
 - Next.js 16 with TypeScript
-- Tailwind CSS for styling
+- Tailwind CSS v4 for styling
 - Custom animations (HDD lights, file operations)
 - SSE streaming with fetch API
 - LocalStorage keys: `anthropic_api_key`, `anthropic_model`, `system_prompt_file`
 
-**Vanilla JS Frontend (Alternative):**
-- Bootstrap 5.3.2 + Bootstrap Icons (CDN)
-- Vanilla ES6+ JavaScript (no transpilation)
-- LocalStorage keys: `anthropic_api_key`, `anthropic_model`, `system_prompt_file`
+**Backend (Next.js API Routes):**
+- TypeScript (ES modules)
+- Node.js filesystem APIs (`fs`, `path`)
+- Anthropic TypeScript SDK (`@anthropic-ai/sdk`)
+- SSE streaming via ReadableStream
+- Global state management (single-user POC)
 
 ### Logging
 
