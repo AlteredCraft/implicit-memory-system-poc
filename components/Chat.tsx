@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { TokenUsage, StreamEvent, MemoryOperationEvent } from '@/types';
+import { TokenUsage, StreamEvent } from '@/types';
+import { useMemoryContext } from '@/lib/contexts/MemoryContext';
 
 interface ChatProps {
   sessionActive: boolean;
-  onMemoryOperation?: (event: MemoryOperationEvent) => void;
 }
 
 interface Message {
@@ -15,7 +15,8 @@ interface Message {
   toolUses?: string[];
 }
 
-export default function Chat({ sessionActive, onMemoryOperation }: ChatProps) {
+export default function Chat({ sessionActive }: ChatProps) {
+  const { triggerMemoryOperation } = useMemoryContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -25,17 +26,17 @@ export default function Chat({ sessionActive, onMemoryOperation }: ChatProps) {
   const [isTyping, setIsTyping] = useState(false);
   const [currentToolUses, setCurrentToolUses] = useState<string[]>([]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, currentAssistantMessage]);
 
-  const addSystemMessage = (text: string, type: 'info' | 'warning' | 'danger' = 'info') => {
+  const addSystemMessage = useCallback((text: string, type: 'info' | 'warning' | 'danger' = 'info') => {
     setMessages((prev) => [...prev, { role: 'system', content: text }]);
-  };
+  }, []);
 
   const handleStreamEvent = (event: StreamEvent) => {
     switch (event.type) {
@@ -51,10 +52,8 @@ export default function Chat({ sessionActive, onMemoryOperation }: ChatProps) {
       case 'memory_operation':
         console.log('[MEMORY_EVENTS] Received SSE event:', event.data);
         const { operation, path, timestamp } = event.data;
-        if (onMemoryOperation) {
-          console.log(`[MEMORY_EVENTS] Calling onMemoryOperation(${operation}, ${path})`);
-          onMemoryOperation({ operation, path, timestamp });
-        }
+        console.log(`[MEMORY_EVENTS] Triggering memory operation via Context: ${operation}, ${path}`);
+        triggerMemoryOperation({ operation, path, timestamp });
         break;
 
       case 'tool_use_start':

@@ -1,15 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { MemoryFile, MemoryOperationEvent } from '@/types';
+import { MemoryFile } from '@/types';
 import { formatRelativeTime } from '@/lib/utils';
+import { useMemoryOperationHandler } from '@/lib/hooks/useMemoryOperationHandler';
 
-interface MemoryBrowserProps {
-  onRefreshTrigger?: number;
-}
-
-export default function MemoryBrowser({ onRefreshTrigger }: MemoryBrowserProps) {
+export default function MemoryBrowser() {
   const [memoryFiles, setMemoryFiles] = useState<MemoryFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<MemoryFile | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
@@ -17,20 +14,20 @@ export default function MemoryBrowser({ onRefreshTrigger }: MemoryBrowserProps) 
   const [readLightActive, setReadLightActive] = useState(false);
   const [writeLightActive, setWriteLightActive] = useState(false);
 
-  const refreshMemoryFiles = async () => {
+  const refreshMemoryFiles = useCallback(async () => {
     try {
       const data = await api.getMemoryFiles();
       setMemoryFiles(data.files || []);
     } catch (error: any) {
       console.error('Failed to load memory files:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refreshMemoryFiles();
-  }, [onRefreshTrigger]);
+  }, [refreshMemoryFiles]);
 
-  const viewFile = async (file: MemoryFile) => {
+  const viewFile = useCallback(async (file: MemoryFile) => {
     try {
       const data = await api.getMemoryFile(file.path);
       setSelectedFile(file);
@@ -44,21 +41,21 @@ export default function MemoryBrowser({ onRefreshTrigger }: MemoryBrowserProps) 
     } catch (error: any) {
       console.error('Failed to load memory file:', error);
     }
-  };
+  }, []);
 
-  const closeViewer = () => {
+  const closeViewer = useCallback(() => {
     setSelectedFile(null);
     setFileContent('');
     setShowUpdateBanner(false);
-  };
+  }, []);
 
-  const reloadViewer = () => {
+  const reloadViewer = useCallback(() => {
     if (selectedFile) {
       viewFile(selectedFile);
     }
-  };
+  }, [selectedFile, viewFile]);
 
-  const handleClearMemory = async () => {
+  const handleClearMemory = useCallback(async () => {
     if (!confirm('Are you sure you want to clear all memories? This cannot be undone.')) {
       return;
     }
@@ -70,9 +67,9 @@ export default function MemoryBrowser({ onRefreshTrigger }: MemoryBrowserProps) 
     } catch (error: any) {
       console.error('Failed to clear memories:', error);
     }
-  };
+  }, [refreshMemoryFiles, closeViewer]);
 
-  const triggerHDDLight = (type: 'read' | 'write') => {
+  const triggerHDDLight = useCallback((type: 'read' | 'write') => {
     console.log(`[MEMORY_ANIMATION] Triggering HDD ${type} light`);
     if (type === 'read') {
       setReadLightActive(true);
@@ -81,91 +78,18 @@ export default function MemoryBrowser({ onRefreshTrigger }: MemoryBrowserProps) 
       setWriteLightActive(true);
       setTimeout(() => setWriteLightActive(false), 1500);
     }
-  };
+  }, []);
 
-  // Handle memory operations from parent
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).handleMemoryOperationFromChat = async (event: MemoryOperationEvent) => {
-        console.log('[MEMORY_EVENTS] Handling operation:', event);
-
-        switch (event.operation) {
-          case 'create':
-            await refreshMemoryFiles();
-            // Mark new file
-            setMemoryFiles((prev) =>
-              prev.map((f) =>
-                f.path === event.path
-                  ? { ...f, isNew: true, lastOperation: 'create', operationTimestamp: event.timestamp }
-                  : f
-              )
-            );
-            break;
-
-          case 'read':
-            await refreshMemoryFiles();
-            // Mark file with read operation for animation
-            setMemoryFiles((prev) =>
-              prev.map((f) =>
-                f.path === event.path
-                  ? { ...f, lastOperation: 'read', operationTimestamp: event.timestamp }
-                  : f
-              )
-            );
-            // Clear animation after it completes (1 second)
-            setTimeout(() => {
-              setMemoryFiles((prev) =>
-                prev.map((f) =>
-                  f.path === event.path && f.lastOperation === 'read'
-                    ? { ...f, lastOperation: undefined }
-                    : f
-                )
-              );
-            }, 1000);
-            if (selectedFile?.path === event.path) {
-              triggerHDDLight('read');
-            }
-            break;
-
-          case 'update':
-            await refreshMemoryFiles();
-            setMemoryFiles((prev) =>
-              prev.map((f) =>
-                f.path === event.path
-                  ? { ...f, isNew: false, lastOperation: 'update', operationTimestamp: event.timestamp }
-                  : f
-              )
-            );
-            // Clear animation after it completes (1 second)
-            setTimeout(() => {
-              setMemoryFiles((prev) =>
-                prev.map((f) =>
-                  f.path === event.path && f.lastOperation === 'update'
-                    ? { ...f, lastOperation: undefined }
-                    : f
-                )
-              );
-            }, 1000);
-            if (selectedFile?.path === event.path) {
-              setShowUpdateBanner(true);
-              triggerHDDLight('write');
-            }
-            break;
-
-          case 'delete':
-            setMemoryFiles((prev) => prev.filter((f) => f.path !== event.path));
-            if (selectedFile?.path === event.path) {
-              closeViewer();
-            }
-            break;
-
-          case 'rename':
-            await refreshMemoryFiles();
-            break;
-        }
-      };
-    }
-  }, [selectedFile]);
+  // Handle memory operations using custom hook
+  useMemoryOperationHandler({
+    memoryFiles,
+    setMemoryFiles,
+    selectedFile,
+    refreshMemoryFiles,
+    closeViewer,
+    triggerHDDLight,
+    setShowUpdateBanner,
+  });
 
   return (
     <div className="flex flex-col h-full border-l border-gray-200">
