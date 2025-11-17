@@ -1,6 +1,7 @@
 // API utility functions for Memory System v2
 
-const API_BASE = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8888';
+// Use environment variable for API base URL, fallback to localhost:8888 (FastAPI backend)
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8888';
 
 export const api = {
   // Session endpoints
