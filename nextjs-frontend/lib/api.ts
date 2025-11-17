@@ -1,6 +1,8 @@
 // API utility functions for Memory System v2
 
-const API_BASE = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8888';
+// Use Next.js API routes (which proxy to FastAPI backend)
+// This avoids CORS issues and keeps backend URL server-side
+const API_BASE = '';
 
 export const api = {
   // Session endpoints
