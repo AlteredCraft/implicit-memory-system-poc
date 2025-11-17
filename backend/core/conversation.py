@@ -90,6 +90,7 @@ class ConversationManager:
 
         Yields JSON events:
         - {"type": "thinking", "data": "Processing..."}
+        - {"type": "memory_operation", "data": {...}}
         - {"type": "text", "data": "complete response text"}
         - {"type": "done", "data": {"tokens": {...}}}
         """
@@ -108,6 +109,9 @@ class ConversationManager:
                 "data": "Processing..."
             }
 
+            # Track message count before tool runner executes
+            messages_before_count = len(self.messages)
+
             # Use tool_runner to get complete response (including all tool calls)
             runner = self.client.beta.messages.tool_runner(
                 model=self.model,
@@ -120,6 +124,25 @@ class ConversationManager:
 
             # Get final response (this runs all tool calls automatically)
             response = runner.until_done()
+
+            # Get memory operations from the memory tool (it tracks them internally)
+            memory_operations = self.memory_tool.get_and_clear_recent_operations()
+
+            # DEBUG: Log detected memory operations
+            if memory_operations:
+                logger.info(f"[MEMORY_EVENTS] Detected {len(memory_operations)} memory operation(s)")
+                for op in memory_operations:
+                    logger.info(f"[MEMORY_EVENTS] → {op['operation']}: {op['path']}")
+            else:
+                logger.info(f"[MEMORY_EVENTS] No memory operations detected")
+
+            # Emit memory operation events via SSE
+            for operation in memory_operations:
+                logger.info(f"[MEMORY_EVENTS] Emitting SSE event: {operation}")
+                yield {
+                    "type": "memory_operation",
+                    "data": operation
+                }
 
             # Extract response text
             response_text = ""

@@ -365,3 +365,160 @@ pre code {
         margin: 0;
     }
 }
+
+/* ===== Real-Time Memory Panel Animations ===== */
+
+/* Slide-in animation for new files */
+@keyframes slideInFromTop {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.memory-item.new-file-animation {
+    animation: slideInFromTop 0.6s ease-out;
+}
+
+/* Label glow effects */
+@keyframes labelGlowGreen {
+    0%, 100% {
+        box-shadow: none;
+        background-color: transparent;
+    }
+    50% {
+        box-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+        background-color: rgba(0, 255, 0, 0.1);
+    }
+}
+
+@keyframes labelGlowOrange {
+    0%, 100% {
+        box-shadow: none;
+        background-color: transparent;
+    }
+    50% {
+        box-shadow: 0 0 8px rgba(255, 102, 0, 0.6);
+        background-color: rgba(255, 102, 0, 0.1);
+    }
+}
+
+.memory-timestamp-label {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.3s;
+}
+
+.memory-timestamp-label.flash-read {
+    animation: labelGlowGreen 1s ease-in-out;
+}
+
+.memory-timestamp-label.flash-write {
+    animation: labelGlowOrange 1s ease-in-out;
+}
+
+/* HDD Lights Panel */
+.hdd-lights-panel {
+    display: flex;
+    gap: 20px;
+    padding: 10px;
+    background: linear-gradient(to bottom, #2c3e50, #34495e);
+    border-bottom: 2px solid #1a252f;
+    justify-content: center;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+.hdd-light {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.light-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #555;
+    border: 1px solid #333;
+    transition: all 0.3s;
+}
+
+.hdd-light.active .light-indicator {
+    box-shadow: 0 0 10px currentColor;
+}
+
+.read-light.active .light-indicator {
+    background: #00ff00;
+    color: #00ff00;
+}
+
+.write-light.active .light-indicator {
+    background: #ff6600;
+    color: #ff6600;
+}
+
+@keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.hdd-light.active .light-indicator {
+    animation: flicker 1.5s ease-in-out;
+}
+
+.hdd-light span {
+    color: #ecf0f1;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* Loading Skeleton */
+.loading-skeleton {
+    padding: 10px;
+}
+
+.skeleton-item {
+    height: 60px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s ease-in-out infinite;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Memory labels */
+.memory-labels {
+    display: flex;
+    gap: 5px;
+}
+
+.memory-timestamps {
+    line-height: 1.4;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .memory-item.new-file-animation,
+    .memory-timestamp-label.flash-read,
+    .memory-timestamp-label.flash-write,
+    .hdd-light.active .light-indicator,
+    .skeleton-item {
+        animation: none;
+    }
+}

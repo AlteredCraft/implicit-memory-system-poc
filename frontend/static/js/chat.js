@@ -137,6 +137,18 @@ function handleStreamEvent(event) {
             appendToAssistantMessage(event.data);
             break;
 
+        case 'memory_operation':
+            // Handle memory operation event
+            console.log('[MEMORY_EVENTS] Received SSE event:', event.data);
+            const { operation, path, timestamp } = event.data;
+            if (typeof handleMemoryOperation === 'function') {
+                console.log(`[MEMORY_EVENTS] Calling handleMemoryOperation(${operation}, ${path}, ${timestamp})`);
+                handleMemoryOperation(operation, path, timestamp);
+            } else {
+                console.warn('[MEMORY_EVENTS] handleMemoryOperation function not found!');
+            }
+            break;
+
         case 'tool_use_start':
             // Show tool use indicator
             addToolUseIndicator(event.data.tool);

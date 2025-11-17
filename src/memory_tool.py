@@ -49,6 +49,7 @@ class LocalFilesystemMemoryTool(BetaAbstractMemoryTool):
         self.memory_root = self.base_path / "memories"
         self.memory_root.mkdir(exist_ok=True, parents=True)
         self.trace = None  # Optional session trace
+        self.recent_operations = []  # Track operations for real-time UI updates
         logger.info(f"[MEMORY] Initialized with root: {self.memory_root.absolute()}")
 
     def set_trace(self, trace) -> None:
@@ -60,6 +61,23 @@ class LocalFilesystemMemoryTool(BetaAbstractMemoryTool):
         """
         self.trace = trace
         logger.debug(f"[MEMORY] Session trace connected")
+
+    def _track_operation(self, operation: str, path: str) -> None:
+        """Track a memory operation for real-time UI updates."""
+        from datetime import datetime
+        clean_path = path.replace('/memories/', '') if path.startswith('/memories') else path
+        self.recent_operations.append({
+            'operation': operation,
+            'path': clean_path,
+            'timestamp': datetime.now().isoformat()
+        })
+        logger.info(f"[MEMORY] Tracked operation: {operation} on {clean_path}")
+
+    def get_and_clear_recent_operations(self) -> list:
+        """Get and clear recent operations for emitting as SSE events."""
+        operations = self.recent_operations.copy()
+        self.recent_operations.clear()
+        return operations
 
     def _validate_path(self, path: str) -> Path:
         """
@@ -155,6 +173,9 @@ class LocalFilesystemMemoryTool(BetaAbstractMemoryTool):
             else:
                 logger.debug(f"[MEMORY]   Content preview: {result[:200]}... (truncated)")
 
+            # Track operation for real-time UI
+            self._track_operation('read', command.path)
+
             # Log tool result to trace
             if self.trace:
                 self.trace.log_tool_result(
@@ -234,6 +255,9 @@ class LocalFilesystemMemoryTool(BetaAbstractMemoryTool):
 
             result_msg = f"Successfully created {command.path}"
             logger.info(f"[MEMORY] ✓ Created memory file: {command.path}")
+
+            # Track operation for real-time UI
+            self._track_operation('create', command.path)
 
             # Log tool result to trace
             if self.trace:
@@ -322,6 +346,9 @@ class LocalFilesystemMemoryTool(BetaAbstractMemoryTool):
             logger.debug(f"[MEMORY]   New text: {new_preview}")
             result_msg = f"Successfully replaced string in {command.path}"
             logger.info(f"[MEMORY] ✓ Replaced string in {command.path}")
+
+            # Track operation for real-time UI
+            self._track_operation('update', command.path)
 
             # Log tool result to trace
             if self.trace:
@@ -414,6 +441,9 @@ class LocalFilesystemMemoryTool(BetaAbstractMemoryTool):
             result_msg = f"Successfully inserted line in {command.path}"
             logger.info(f"[MEMORY] ✓ Inserted line at position {command.line} in {command.path}")
 
+            # Track operation for real-time UI
+            self._track_operation('update', command.path)
+
             # Log tool result to trace
             if self.trace:
                 self.trace.log_tool_result(
@@ -487,6 +517,9 @@ class LocalFilesystemMemoryTool(BetaAbstractMemoryTool):
                 result_msg = f"Successfully deleted {command.path}"
                 logger.debug(f"[MEMORY] Deleted file: {command.path}")
                 logger.info(f"[MEMORY] ✓ Deleted file: {command.path}")
+
+            # Track operation for real-time UI
+            self._track_operation('delete', command.path)
 
             # Log tool result to trace
             if self.trace:
@@ -566,6 +599,9 @@ class LocalFilesystemMemoryTool(BetaAbstractMemoryTool):
             result_msg = f"Successfully renamed {command.old_path} to {command.new_path}"
             logger.debug(f"[MEMORY] Renamed/moved: {command.old_path} → {command.new_path}")
             logger.info(f"[MEMORY] ✓ Renamed {command.old_path} to {command.new_path}")
+
+            # Track operation for real-time UI
+            self._track_operation('rename', command.new_path)
 
             # Log tool result to trace
             if self.trace:
