@@ -84,70 +84,6 @@ class ConversationManager:
 
         logger.info(f"Initialized conversation with model: {model}")
 
-    def _extract_memory_operations(self, messages: list) -> list[dict]:
-        """
-        Extract memory operations from messages to emit as SSE events.
-
-        Args:
-            messages: List of messages from the runner
-
-        Returns:
-            List of memory operation events
-        """
-        operations = []
-
-        for msg in messages:
-            if not hasattr(msg, 'content'):
-                continue
-
-            for block in msg.content:
-                # Check if this is a tool use block for memory
-                if hasattr(block, 'type') and block.type == 'tool_use' and block.name == 'memory':
-                    try:
-                        input_data = block.input
-                        command = input_data.get('command')
-                        path = input_data.get('path', '')
-
-                        # Map commands to operation types
-                        operation_type = None
-                        if command == 'view':
-                            # Only emit 'read' for file reads, not directory listings
-                            if path and not path.endswith('/') and '/memories/' in path:
-                                operation_type = 'read'
-                        elif command == 'create':
-                            operation_type = 'create'
-                        elif command in ['str_replace', 'insert']:
-                            operation_type = 'update'
-                        elif command == 'delete':
-                            operation_type = 'delete'
-                        elif command == 'rename':
-                            # For rename, emit events for both old and new paths
-                            old_path = input_data.get('old_path', '')
-                            new_path = input_data.get('new_path', '')
-                            if old_path:
-                                operations.append({
-                                    'operation': 'rename',
-                                    'path': old_path.replace('/memories/', ''),
-                                    'new_path': new_path.replace('/memories/', ''),
-                                    'timestamp': datetime.now().isoformat()
-                                })
-                            continue
-
-                        if operation_type and path:
-                            # Remove /memories/ prefix from path
-                            clean_path = path.replace('/memories/', '')
-                            if clean_path:
-                                operations.append({
-                                    'operation': operation_type,
-                                    'path': clean_path,
-                                    'timestamp': datetime.now().isoformat()
-                                })
-                    except Exception as e:
-                        logger.warning(f"Error extracting memory operation: {e}")
-                        continue
-
-        return operations
-
     async def send_message_streaming(self, user_message: str) -> AsyncGenerator[dict, None]:
         """
         Send a message to Claude and return the response.
@@ -189,10 +125,20 @@ class ConversationManager:
             # Get final response (this runs all tool calls automatically)
             response = runner.until_done()
 
-            # Extract and emit memory operations from new messages added during tool runner execution
-            new_messages = self.messages[messages_before_count:]
-            memory_operations = self._extract_memory_operations(new_messages)
+            # Get memory operations from the memory tool (it tracks them internally)
+            memory_operations = self.memory_tool.get_and_clear_recent_operations()
+
+            # DEBUG: Log detected memory operations
+            if memory_operations:
+                logger.info(f"[MEMORY_EVENTS] Detected {len(memory_operations)} memory operation(s)")
+                for op in memory_operations:
+                    logger.info(f"[MEMORY_EVENTS] → {op['operation']}: {op['path']}")
+            else:
+                logger.info(f"[MEMORY_EVENTS] No memory operations detected")
+
+            # Emit memory operation events via SSE
             for operation in memory_operations:
+                logger.info(f"[MEMORY_EVENTS] Emitting SSE event: {operation}")
                 yield {
                     "type": "memory_operation",
                     "data": operation

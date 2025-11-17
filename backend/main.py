@@ -6,6 +6,7 @@ Provides HTTP streaming chat, memory operations, and session management.
 import os
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from contextlib import asynccontextmanager
@@ -218,7 +219,11 @@ async def list_memory_files():
         return {"files": []}
 
     files = []
-    for file_path in memory_dir.rglob("*.txt"):
+    # Support both .txt and .md files (Claude may use either)
+    for file_path in memory_dir.rglob("*"):
+        if not file_path.is_file():
+            continue
+
         relative_path = file_path.relative_to(memory_dir)
         stat = file_path.stat()
 

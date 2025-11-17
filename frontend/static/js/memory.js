@@ -230,7 +230,8 @@ function reloadMemoryViewer() {
  * Handle memory operation events from SSE stream
  */
 async function handleMemoryOperation(operation, path, timestamp) {
-    console.log(`Memory operation: ${operation} on ${path}`);
+    console.log(`[MEMORY_EVENTS] handleMemoryOperation called: ${operation} on ${path}`);
+    console.log(`[MEMORY_EVENTS] Current state has ${memoryFilesState.files.length} files`);
 
     switch(operation) {
         case 'create':
@@ -344,6 +345,7 @@ async function handleMemoryOperation(operation, path, timestamp) {
  * Animate a new file sliding in from top
  */
 function animateNewFile(fileElement) {
+    console.log('[MEMORY_ANIMATION] Triggering slide-in animation');
     fileElement.classList.add('new-file-animation');
     setTimeout(() => {
         fileElement.classList.remove('new-file-animation');
@@ -355,15 +357,20 @@ function animateNewFile(fileElement) {
  */
 function flashTimestampLabel(fileElement, operationType) {
     // operationType: 'read' or 'write'
+    console.log(`[MEMORY_ANIMATION] Flashing ${operationType} label`);
     const labelClass = operationType === 'read'
         ? '.memory-timestamp-accessed'
         : '.memory-timestamp-updated';
 
     const label = fileElement.querySelector(labelClass);
-    if (!label) return;
+    if (!label) {
+        console.warn(`[MEMORY_ANIMATION] Label not found: ${labelClass}`);
+        return;
+    }
 
     const flashClass = operationType === 'read' ? 'flash-read' : 'flash-write';
     label.classList.add(flashClass);
+    console.log(`[MEMORY_ANIMATION] Added class ${flashClass} to label`);
 
     setTimeout(() => {
         label.classList.remove(flashClass);
@@ -374,12 +381,17 @@ function flashTimestampLabel(fileElement, operationType) {
  * Trigger HDD light animation in viewer
  */
 function triggerHDDLight(type) {
+    console.log(`[MEMORY_ANIMATION] Triggering HDD ${type} light`);
     const lightClass = type === 'read' ? '.read-light' : '.write-light';
     const lightElement = document.querySelector(lightClass);
 
-    if (!lightElement) return;
+    if (!lightElement) {
+        console.warn(`[MEMORY_ANIMATION] HDD light not found: ${lightClass}`);
+        return;
+    }
 
     lightElement.classList.add('active');
+    console.log(`[MEMORY_ANIMATION] HDD ${type} light activated`);
     setTimeout(() => {
         lightElement.classList.remove('active');
     }, HDD_FLICKER_DURATION);
