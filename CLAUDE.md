@@ -32,22 +32,38 @@ uv run src/chat.py               # Interactive terminal chat
 # Accessible via Web UI or API: POST /api/sessions/{id}/diagram
 ```
 
-## Legacy Architecture (Python Backend - Deprecated)
+## Legacy Python CLI (Optional)
 
-The `backend/` and `frontend/` directories contain the legacy Python FastAPI backend and vanilla JS frontend.
-These are **deprecated** and maintained only for reference. The Next.js app is now standalone and includes all functionality.
+The `src/` directory contains a legacy Python CLI interface that can be used as an alternative to the web UI:
+
+```bash
+# Install Python dependencies (requires Python 3.11+, UV package manager)
+uv sync
+
+# Run CLI
+uv run src/chat.py
+```
+
+The CLI uses the same prompts and storage directories but doesn't have all the web UI features.
 
 ## Configuration
 
-### Required Environment Variables
+### Environment Variables (Optional)
 
-Create `nextjs-frontend/.env` based on `nextjs-frontend/.env.example`:
+The Next.js app stores API keys in **browser localStorage** (single-user POC). Server-side environment variables are optional and only used for defaults.
+
+Create `nextjs-frontend/.env` if you want server-side defaults:
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...        # Required
-ANTHROPIC_MODEL=claude-sonnet-4-5-20250929  # Optional, defaults to this model
-APP_LOG_LEVEL=INFO                   # DEBUG|INFO|WARNING|ERROR
-DEPENDENCIES_LOG_LEVEL=WARNING       # Control library verbosity
+# Optional - API key can be entered in web UI instead
+# ANTHROPIC_API_KEY=sk-ant-...
+
+# Optional - defaults to claude-sonnet-4-5-20250929
+# ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+
+# Optional - logging levels
+# APP_LOG_LEVEL=INFO
+# DEPENDENCIES_LOG_LEVEL=WARNING
 ```
 
 ### System Prompts
