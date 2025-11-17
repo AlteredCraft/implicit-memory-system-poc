@@ -1,7 +1,8 @@
 // API utility functions for Memory System v2
 
-// Use environment variable for API base URL, fallback to localhost:8888 (FastAPI backend)
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8888';
+// Use Next.js API routes (which proxy to FastAPI backend)
+// This avoids CORS issues and keeps backend URL server-side
+const API_BASE = '';
 
 export const api = {
   // Session endpoints
