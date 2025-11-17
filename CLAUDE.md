@@ -7,23 +7,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Memory System v2** - A demonstration application for Claude's autonomous memory management using Anthropic's Memory Tool. Claude decides what to remember without explicit user commands, showcasing the evolution from explicit commands to implicit trust.
 
 - **Related Article**: https://alteredcraft.com/p/the-memory-illusion-teaching-your
-- **Two Interfaces**: Web UI (recommended, FastAPI + vanilla JS) and CLI
+- **Three Interfaces**: Next.js Web UI (recommended), Vanilla JS Web UI, and CLI
 - **Memory Storage**: Plain text files in `./memory/memories/` for transparency
 - **Session Recording**: All interactions traced to `./sessions/` as JSON
 - **Architecture**: Single-user POC (not production-ready - no auth, global state)
 
 ## Development Commands
 
-This is a **Python project using UV package manager** (not npm).
+This is a **Python project using UV package manager** (not npm). However, the Next.js frontend requires Node.js/npm.
 
 ```bash
 # Setup
-uv sync                          # Install dependencies
+uv sync                          # Install Python dependencies
+cd nextjs-frontend && npm install  # Install Next.js dependencies
 
-# Run Web UI (Primary Interface)
+# Run Next.js Web UI (Recommended Interface)
+./run_nextjs.sh                  # Starts Next.js dev server on http://localhost:3000
+# Note: FastAPI backend must be running first (see below)
+
+# Run FastAPI Backend (Required for Next.js)
 ./run_webui.sh                   # Starts FastAPI server on http://localhost:8888
 # Or manually:
 uv run uvicorn backend.main:app --host 0.0.0.0 --port 8888 --reload
+
+# Run Vanilla JS Web UI (Alternative Interface)
+./run_webui.sh                   # Starts FastAPI server with vanilla JS frontend on http://localhost:8888
 
 # Run CLI (Alternative Interface)
 uv run src/chat.py              # Interactive terminal chat
@@ -59,16 +67,23 @@ DEPENDENCIES_LOG_LEVEL=WARNING       # Control library verbosity
 
 ## Architecture & Code Organization
 
-### Dual-Interface Architecture
+### Multi-Interface Architecture
 
-Two operating modes sharing core logic:
+Three operating modes sharing core logic:
 
-1. **Web UI** (Primary)
+1. **Next.js Web UI** (Recommended)
+   - Backend: FastAPI serving REST API
+   - Frontend: Next.js 16 with TypeScript and Tailwind CSS
+   - Communication: Server-Sent Events (SSE) for streaming responses
+   - Port: http://localhost:3000 (dev server)
+
+2. **Vanilla JS Web UI** (Alternative)
    - Backend: FastAPI serving REST API + static files
    - Frontend: Vanilla JavaScript SPA (no build process, ~1000 LOC)
    - Communication: Server-Sent Events (SSE) for streaming responses
+   - Port: http://localhost:8888
 
-2. **CLI** (Alternative)
+3. **CLI** (Alternative)
    - Terminal-based interface with same core functionality
    - Direct Anthropic API integration
 
@@ -80,7 +95,23 @@ backend/              # FastAPI application
   core/
     conversation.py  # ConversationManager - coordinates messages & tools
 
-frontend/            # Web UI (vanilla JS + Bootstrap 5)
+nextjs-frontend/     # Next.js Web UI (TypeScript + Tailwind CSS)
+  app/
+    page.tsx         # Main application page
+    layout.tsx       # Root layout
+    globals.css      # Global styles with custom animations
+  components/
+    Chat.tsx         # Chat UI with SSE handling
+    MemoryBrowser.tsx  # Memory file browser with animations
+    Sessions.tsx     # Session history & diagram generation
+    SettingsModal.tsx  # Configuration modal
+  lib/
+    api.ts           # API client functions
+    utils.ts         # Utility functions
+  types/
+    index.ts         # TypeScript type definitions
+
+frontend/            # Vanilla JS Web UI (Bootstrap 5)
   index.html         # Single-page application
   static/js/         # No framework, no build process
     app.js           # App initialization
@@ -151,8 +182,16 @@ Central coordinator for message handling:
 - All operations logged to session trace
 - Supports: view, create, str_replace, insert, delete, rename
 
-### Frontend Stack (No Build Process)
+### Frontend Stacks
 
+**Next.js Frontend (Recommended):**
+- Next.js 16 with TypeScript
+- Tailwind CSS for styling
+- Custom animations (HDD lights, file operations)
+- SSE streaming with fetch API
+- LocalStorage keys: `anthropic_api_key`, `anthropic_model`, `system_prompt_file`
+
+**Vanilla JS Frontend (Alternative):**
 - Bootstrap 5.3.2 + Bootstrap Icons (CDN)
 - Vanilla ES6+ JavaScript (no transpilation)
 - LocalStorage keys: `anthropic_api_key`, `anthropic_model`, `system_prompt_file`
