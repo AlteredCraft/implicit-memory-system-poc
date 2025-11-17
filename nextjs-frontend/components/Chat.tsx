@@ -95,6 +95,8 @@ export default function Chat({ sessionActive, onMemoryOperation }: ChatProps) {
 
     const decoder = new TextDecoder();
     let buffer = '';
+    let accumulatedText = ''; // Accumulate text locally
+    let accumulatedTools: string[] = [];
 
     try {
       while (true) {
@@ -113,7 +115,30 @@ export default function Chat({ sessionActive, onMemoryOperation }: ChatProps) {
             if (data.trim()) {
               try {
                 const event = JSON.parse(data);
-                handleStreamEvent(event);
+
+                // Handle text accumulation locally
+                if (event.type === 'text') {
+                  accumulatedText += event.data;
+                  setCurrentAssistantMessage(accumulatedText);
+                } else if (event.type === 'tool_use_start') {
+                  accumulatedTools.push(event.data.tool);
+                  setCurrentToolUses(accumulatedTools);
+                } else if (event.type === 'done') {
+                  // Use locally accumulated text for final message
+                  setIsTyping(false);
+                  if (event.data.tokens) {
+                    setTokens(event.data.tokens);
+                  }
+                  setMessages((prev) => [
+                    ...prev,
+                    { role: 'assistant', content: accumulatedText, toolUses: accumulatedTools },
+                  ]);
+                  setCurrentAssistantMessage('');
+                  setCurrentToolUses([]);
+                } else {
+                  // Handle other events normally
+                  handleStreamEvent(event);
+                }
               } catch (e) {
                 console.error('Failed to parse event:', data, e);
               }
