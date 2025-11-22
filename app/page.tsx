@@ -19,6 +19,8 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'not-initialized' | 'initializing' | 'connected' | 'error'>('not-initialized');
   const [activeTab, setActiveTab] = useState<'chat' | 'sessions'>('chat');
+  const [envApiKeyAvailable, setEnvApiKeyAvailable] = useState(false);
+  const [envApiKeyMasked, setEnvApiKeyMasked] = useState<string | null>(null);
 
   useEffect(() => {
     // Load settings from localStorage
@@ -30,14 +32,23 @@ export default function Home() {
     setModel(savedModel);
     setSystemPromptFile(savedPromptFile);
 
-    // Load available prompts
+    // Load available prompts and config
     loadAvailablePrompts();
+    loadConfig();
 
     // Auto-initialize if settings are saved
     if (savedApiKey && savedPromptFile) {
       initializeSession(savedApiKey, savedModel, savedPromptFile);
     } else {
-      setShowSettings(true);
+      // Will show settings after config is loaded (to know if env key exists)
+      loadConfig().then((config) => {
+        // If we have an env API key and a prompt file, we can auto-initialize
+        if (config?.api_key_set && savedPromptFile) {
+          initializeSession('', savedModel, savedPromptFile);
+        } else {
+          setShowSettings(true);
+        }
+      });
     }
   }, []);
 
@@ -54,6 +65,18 @@ export default function Home() {
       }
     } catch (error: any) {
       console.error('Failed to load prompts:', error);
+    }
+  };
+
+  const loadConfig = async () => {
+    try {
+      const config = await api.getConfig();
+      setEnvApiKeyAvailable(config.api_key_set || false);
+      setEnvApiKeyMasked(config.env_api_key_masked || null);
+      return config;
+    } catch (error: any) {
+      console.error('Failed to load config:', error);
+      return null;
     }
   };
 
@@ -249,6 +272,8 @@ export default function Home() {
           currentApiKey={apiKey}
           currentModel={model}
           currentPromptFile={systemPromptFile}
+          envApiKeyAvailable={envApiKeyAvailable}
+          envApiKeyMasked={envApiKeyMasked}
         />
       </div>
     </MemoryProvider>
