@@ -20,8 +20,11 @@ export async function POST(request: NextRequest) {
       existingManager.finalize();
     }
 
+    // Use provided API key or fall back to environment variable
+    const apiKey = body.api_key || process.env.ANTHROPIC_API_KEY;
+
     // Validate API key
-    if (!body.api_key) {
+    if (!apiKey) {
       return NextResponse.json(
         { detail: 'API key required' },
         { status: 400 }
@@ -42,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     // Create new conversation manager
     const conversationManager = new ConversationManager(
-      body.api_key,
+      apiKey,
       body.model,
       systemPrompt
     );
