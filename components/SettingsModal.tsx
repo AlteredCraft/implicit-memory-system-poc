@@ -11,6 +11,8 @@ interface SettingsModalProps {
   currentApiKey: string;
   currentModel: string;
   currentPromptFile: string;
+  envApiKeyAvailable: boolean;
+  envApiKeyMasked: string | null;
 }
 
 export default function SettingsModal({
@@ -21,6 +23,8 @@ export default function SettingsModal({
   currentApiKey,
   currentModel,
   currentPromptFile,
+  envApiKeyAvailable,
+  envApiKeyMasked,
 }: SettingsModalProps) {
   const [apiKey, setApiKey] = useState(currentApiKey);
   const [model, setModel] = useState(currentModel);
@@ -34,7 +38,7 @@ export default function SettingsModal({
   }, [currentApiKey, currentModel, currentPromptFile, isOpen]);
 
   const handleSave = () => {
-    if (!apiKey.trim()) {
+    if (!apiKey.trim() && !envApiKeyAvailable) {
       setError('API key is required');
       setTimeout(() => setError(''), 5000);
       return;
@@ -84,9 +88,40 @@ export default function SettingsModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="sk-ant-..."
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Your API key is stored locally in browser only
-            </p>
+            {/* API Key Status Indicator */}
+            <div className="mt-2 space-y-1">
+              {apiKey ? (
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 text-xs">
+                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    <span className="text-green-700 font-medium">User-supplied key configured</span>
+                  </span>
+                </div>
+              ) : envApiKeyAvailable ? (
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 text-xs">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                    <span className="text-blue-700 font-medium">
+                      Environment key available: <code className="bg-blue-50 px-1 rounded">{envApiKeyMasked}</code>
+                    </span>
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 text-xs">
+                    <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                    <span className="text-red-700 font-medium">No API key configured</span>
+                  </span>
+                </div>
+              )}
+              <p className="text-xs text-gray-500">
+                {apiKey
+                  ? 'Stored locally in browser'
+                  : envApiKeyAvailable
+                    ? 'Enter a key above to override the environment variable'
+                    : 'Enter your API key to get started'}
+              </p>
+            </div>
           </div>
 
           <div>

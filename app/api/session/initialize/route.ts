@@ -20,8 +20,11 @@ export async function POST(request: NextRequest) {
       existingManager.finalize();
     }
 
+    // Use provided API key or fall back to environment variable
+    const apiKey = body.api_key || process.env.ANTHROPIC_API_KEY;
+
     // Validate API key
-    if (!body.api_key) {
+    if (!apiKey) {
       return NextResponse.json(
         { detail: 'API key required' },
         { status: 400 }
@@ -31,7 +34,10 @@ export async function POST(request: NextRequest) {
     // Load system prompt
     let systemPrompt: string;
     try {
-      const promptPath = path.join(process.cwd(), body.system_prompt_file);
+      // Handle both absolute and relative paths
+      const promptPath = path.isAbsolute(body.system_prompt_file)
+        ? body.system_prompt_file
+        : path.join(process.cwd(), body.system_prompt_file);
       systemPrompt = loadSystemPrompt(promptPath);
     } catch (error: any) {
       return NextResponse.json(
@@ -42,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     // Create new conversation manager
     const conversationManager = new ConversationManager(
-      body.api_key,
+      apiKey,
       body.model,
       systemPrompt
     );
