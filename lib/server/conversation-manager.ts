@@ -8,7 +8,7 @@ import { LocalFilesystemMemoryTool } from './memory-tool';
 import { SessionTrace } from './session-trace';
 
 export interface StreamEvent {
-  type: 'thinking' | 'memory_operation' | 'text' | 'done' | 'error';
+  type: 'thinking' | 'memory_operation' | 'text' | 'text_delta' | 'done' | 'error';
   data: any;
 }
 
@@ -67,17 +67,63 @@ export class ConversationManager {
         data: 'Processing...'
       };
 
-      // Use toolRunner - handles the agentic loop automatically
+      // Use toolRunner with streaming - handles the agentic loop automatically
+      // NOTE: The SDK's beta-parser adds 'parsed: null' to text blocks during streaming,
+      // which causes 400 errors on subsequent API calls. We clean this in-place after
+      // each finalMessage() call below.
       const runner = this.client.beta.messages.toolRunner({
         model: this.model,
         max_tokens: 2048,
         system: this.systemPrompt,
         messages: this.messages as any,
         tools: [this.memoryTool.toRunnableTool()],
+        stream: true, // Enable streaming
       });
 
-      // Iterate over messages from the runner to capture tool calls
-      for await (const message of runner) {
+      // Track accumulated response text across all messages
+      let responseText = '';
+
+      // Process nested streams for real-time text
+      for await (const messageStream of runner) {
+        // Process each streaming event within this message
+        for await (const event of messageStream) {
+          // Emit text deltas as they arrive
+          if (event.type === 'content_block_delta') {
+            const delta = event.delta as any;
+            if (delta?.type === 'text_delta' && delta?.text) {
+              responseText += delta.text;
+              yield {
+                type: 'text_delta',
+                data: delta.text
+              };
+            }
+          }
+
+          // Log tool use events
+          if (event.type === 'content_block_start') {
+            const contentBlock = event.content_block as any;
+            if (contentBlock?.type === 'tool_use') {
+              console.log(`[ConversationManager] Tool use started: ${contentBlock.name}`);
+            }
+          }
+        }
+
+        // Get the final message from this stream for tool logging
+        const message = await messageStream.finalMessage();
+
+        // CRITICAL: Clean the message content IN PLACE before the SDK pushes it.
+        // The SDK's beta-parser adds 'parsed: null' to text blocks internally, which causes
+        // 400 errors on subsequent API calls. Since finalMessage() returns the same object
+        // reference that the SDK uses internally, mutating it here cleans it before the
+        // SDK pushes it to params.messages. This avoids using setMessagesParams() which
+        // would set _mutated=true and break the loop's exit condition.
+        for (let i = 0; i < message.content.length; i++) {
+          const block = message.content[i] as any;
+          if (block.type === 'text' && 'parsed' in block) {
+            delete block.parsed;
+          }
+        }
+
         // Log tool calls to trace
         for (const content of message.content) {
           if (content.type === 'tool_use') {
@@ -87,7 +133,7 @@ export class ConversationManager {
           }
         }
 
-        // Emit memory operations for UI updates
+        // Emit memory operations for UI updates (after tool execution)
         const memoryOperations = this.memoryTool.getAndClearRecentOperations();
         for (const operation of memoryOperations) {
           console.log(`[ConversationManager] Emitting memory operation: ${operation.operation} on ${operation.path}`);
@@ -98,23 +144,8 @@ export class ConversationManager {
         }
       }
 
-      // Get final result - toolRunner ensures we get a complete response
+      // Get final result from runner
       const finalMessage = await runner;
-
-      // Extract final text from the complete message
-      let responseText = '';
-      for (const content of finalMessage.content) {
-        if (content.type === 'text') {
-          responseText = content.text;
-          break;
-        }
-      }
-
-      // Yield complete response
-      yield {
-        type: 'text',
-        data: responseText
-      };
 
       // Update messages with final response
       this.messages.push({ role: 'assistant', content: responseText });

@@ -57,7 +57,7 @@ export interface TokenUsage {
 }
 
 export interface StreamEvent {
-  type: 'thinking' | 'text' | 'memory_operation' | 'tool_use_start' | 'done' | 'error';
+  type: 'thinking' | 'text' | 'text_delta' | 'memory_operation' | 'tool_use_start' | 'done' | 'error';
   data: any;
 }
 

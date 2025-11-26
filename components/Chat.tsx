@@ -116,9 +116,13 @@ export default function Chat({ sessionActive, modelName }: ChatProps) {
               try {
                 const event = JSON.parse(data);
 
-                // Handle text accumulation locally
-                if (event.type === 'text') {
+                // Handle text accumulation locally (support both text_delta and text events)
+                if (event.type === 'text_delta') {
                   accumulatedText += event.data;
+                  setCurrentAssistantMessage(accumulatedText);
+                } else if (event.type === 'text') {
+                  // Fallback for full text events (backwards compatibility)
+                  accumulatedText = event.data;
                   setCurrentAssistantMessage(accumulatedText);
                 } else if (event.type === 'tool_use_start') {
                   accumulatedTools.push(event.data.tool);
