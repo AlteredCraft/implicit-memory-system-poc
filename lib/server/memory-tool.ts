@@ -11,6 +11,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { SessionTrace } from './session-trace';
+import { MemoryOperationLogger, MemoryOperationType } from './memory-operation-logger';
 
 interface MemoryOperation {
   operation: string;
@@ -23,8 +24,9 @@ export class LocalFilesystemMemoryTool {
   private memoryRoot: string;
   private trace: SessionTrace | null = null;
   private recentOperations: MemoryOperation[] = [];
+  private logger: MemoryOperationLogger;
 
-  constructor(basePath: string = './memory') {
+  constructor(basePath: string = './memory', logDir: string = './logs') {
     this.basePath = basePath;
     this.memoryRoot = path.join(basePath, 'memories');
 
@@ -32,6 +34,9 @@ export class LocalFilesystemMemoryTool {
     if (!fs.existsSync(this.memoryRoot)) {
       fs.mkdirSync(this.memoryRoot, { recursive: true });
     }
+
+    // Initialize dedicated memory operation logger
+    this.logger = new MemoryOperationLogger(logDir);
 
     console.log(`[MEMORY] Initialized with root: ${path.resolve(this.memoryRoot)}`);
   }
@@ -41,10 +46,23 @@ export class LocalFilesystemMemoryTool {
     console.log('[MEMORY] Session trace connected');
   }
 
+  /**
+   * Normalize a memory path to consistent format (without /memories/ prefix)
+   * e.g., "/memories/notes.txt" -> "notes.txt"
+   * e.g., "notes.txt" -> "notes.txt"
+   */
+  private _normalizePath(memoryPath: string): string {
+    if (memoryPath.startsWith('/memories/')) {
+      return memoryPath.substring('/memories/'.length);
+    }
+    if (memoryPath.startsWith('/memories')) {
+      return memoryPath.substring('/memories'.length).replace(/^\//, '') || '/';
+    }
+    return memoryPath;
+  }
+
   private _trackOperation(operation: string, memoryPath: string): void {
-    const cleanPath = memoryPath.startsWith('/memories/')
-      ? memoryPath.replace('/memories/', '')
-      : memoryPath;
+    const cleanPath = this._normalizePath(memoryPath);
 
     this.recentOperations.push({
       operation,
@@ -138,14 +156,15 @@ export class LocalFilesystemMemoryTool {
 
       const result = lines.join('\n');
 
-      // Log content that was loaded
-      console.log(`[MEMORY] Loaded file: ${command.path}`);
-      console.log(`[MEMORY]   Lines: ${lines.length} | Characters: ${result.length}`);
-      if (result.length <= 200) {
-        console.log(`[MEMORY]   Content: ${result}`);
-      } else {
-        console.log(`[MEMORY]   Content preview: ${result.substring(0, 200)}... (truncated)`);
-      }
+      const normalizedPath = this._normalizePath(command.path);
+
+      // Log to dedicated memory operations log
+      this.logger.log({
+        timestamp: new Date().toISOString(),
+        operation: 'READ',
+        path: normalizedPath,
+        details: `${lines.length} lines, ${result.length} bytes`
+      });
 
       // Track operation for real-time UI
       this._trackOperation('read', command.path);
@@ -196,18 +215,18 @@ export class LocalFilesystemMemoryTool {
 
       fs.writeFileSync(fullPath, command.file_text, 'utf-8');
 
-      // Log the new file creation with content
+      const normalizedPath = this._normalizePath(command.path);
       const lines = command.file_text.split('\n');
-      console.log(`[MEMORY] Created new file: ${command.path}`);
-      console.log(`[MEMORY]   Lines: ${lines.length} | Characters: ${command.file_text.length}`);
-      if (command.file_text.length <= 200) {
-        console.log(`[MEMORY]   Content: ${command.file_text}`);
-      } else {
-        console.log(`[MEMORY]   Content preview: ${command.file_text.substring(0, 200)}... (truncated)`);
-      }
+
+      // Log to dedicated memory operations log
+      this.logger.log({
+        timestamp: new Date().toISOString(),
+        operation: 'CREATE',
+        path: normalizedPath,
+        details: `${lines.length} lines, ${command.file_text.length} bytes`
+      });
 
       const resultMsg = `Successfully created ${command.path}`;
-      console.log(`[MEMORY] ✓ Created memory file: ${command.path}`);
 
       // Track operation for real-time UI
       this._trackOperation('create', command.path);
@@ -262,15 +281,17 @@ export class LocalFilesystemMemoryTool {
       const newContent = content.replace(command.old_str, command.new_str);
       fs.writeFileSync(fullPath, newContent, 'utf-8');
 
-      // Log what was changed
-      const oldPreview = command.old_str.length <= 100 ? command.old_str : command.old_str.substring(0, 100) + '...';
-      const newPreview = command.new_str.length <= 100 ? command.new_str : command.new_str.substring(0, 100) + '...';
-      console.log(`[MEMORY] Updated file: ${command.path}`);
-      console.log(`[MEMORY]   Old text: ${oldPreview}`);
-      console.log(`[MEMORY]   New text: ${newPreview}`);
+      const normalizedPath = this._normalizePath(command.path);
+
+      // Log to dedicated memory operations log
+      this.logger.log({
+        timestamp: new Date().toISOString(),
+        operation: 'UPDATE',
+        path: normalizedPath,
+        details: `str_replace: ${command.old_str.length} -> ${command.new_str.length} bytes`
+      });
 
       const resultMsg = `Successfully replaced string in ${command.path}`;
-      console.log(`[MEMORY] ✓ Replaced string in ${command.path}`);
 
       // Track operation for real-time UI
       this._trackOperation('update', command.path);
@@ -331,13 +352,17 @@ export class LocalFilesystemMemoryTool {
       lines.splice(insertIdx, 0, insertText);
       fs.writeFileSync(fullPath, lines.join('\n'), 'utf-8');
 
-      // Log what was inserted
-      const insertPreview = command.insert_line.length <= 100 ? command.insert_line : command.insert_line.substring(0, 100) + '...';
-      console.log(`[MEMORY] Updated file: ${command.path}`);
-      console.log(`[MEMORY]   Inserted at line ${command.line}: ${insertPreview}`);
+      const normalizedPath = this._normalizePath(command.path);
+
+      // Log to dedicated memory operations log
+      this.logger.log({
+        timestamp: new Date().toISOString(),
+        operation: 'UPDATE',
+        path: normalizedPath,
+        details: `insert at line ${command.line}: ${command.insert_line.length} bytes`
+      });
 
       const resultMsg = `Successfully inserted line in ${command.path}`;
-      console.log(`[MEMORY] ✓ Inserted line at position ${command.line} in ${command.path}`);
 
       // Track operation for real-time UI
       this._trackOperation('update', command.path);
@@ -375,18 +400,25 @@ export class LocalFilesystemMemoryTool {
         throw new Error(`Path not found: ${command.path}`);
       }
 
+      const normalizedPath = this._normalizePath(command.path);
+      const isDirectory = fs.statSync(fullPath).isDirectory();
+
       let resultMsg: string;
-      if (fs.statSync(fullPath).isDirectory()) {
+      if (isDirectory) {
         fs.rmSync(fullPath, { recursive: true, force: true });
         resultMsg = `Successfully deleted directory ${command.path}`;
-        console.log(`[MEMORY] Deleted directory: ${command.path}`);
-        console.log(`[MEMORY] ✓ Deleted directory: ${command.path}`);
       } else {
         fs.unlinkSync(fullPath);
         resultMsg = `Successfully deleted ${command.path}`;
-        console.log(`[MEMORY] Deleted file: ${command.path}`);
-        console.log(`[MEMORY] ✓ Deleted file: ${command.path}`);
       }
+
+      // Log to dedicated memory operations log
+      this.logger.log({
+        timestamp: new Date().toISOString(),
+        operation: 'DELETE',
+        path: normalizedPath,
+        details: isDirectory ? 'directory' : 'file'
+      });
 
       // Track operation for real-time UI
       this._trackOperation('delete', command.path);
@@ -440,9 +472,18 @@ export class LocalFilesystemMemoryTool {
 
       fs.renameSync(fullOldPath, fullNewPath);
 
+      const normalizedOldPath = this._normalizePath(command.old_path);
+      const normalizedNewPath = this._normalizePath(command.new_path);
+
+      // Log to dedicated memory operations log
+      this.logger.log({
+        timestamp: new Date().toISOString(),
+        operation: 'RENAME',
+        path: normalizedNewPath,
+        details: `from ${normalizedOldPath}`
+      });
+
       const resultMsg = `Successfully renamed ${command.old_path} to ${command.new_path}`;
-      console.log(`[MEMORY] Renamed/moved: ${command.old_path} → ${command.new_path}`);
-      console.log(`[MEMORY] ✓ Renamed ${command.old_path} to ${command.new_path}`);
 
       // Track operation for real-time UI
       this._trackOperation('rename', command.new_path);

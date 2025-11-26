@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { SystemPrompt } from '@/types';
+import { api } from '@/lib/api';
+
+interface Model {
+  id: string;
+  name: string;
+}
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -30,12 +36,43 @@ export default function SettingsModal({
   const [model, setModel] = useState(currentModel);
   const [promptFile, setPromptFile] = useState(currentPromptFile);
   const [error, setError] = useState('');
+  const [models, setModels] = useState<Model[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     setApiKey(currentApiKey);
     setModel(currentModel);
     setPromptFile(currentPromptFile);
   }, [currentApiKey, currentModel, currentPromptFile, isOpen]);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const data = await api.getModels();
+        setModels(data.models || []);
+
+        // If current model is not in the list, add it
+        if (data.models && !data.models.some((m: Model) => m.id === model)) {
+          setModels((prev) => [
+            ...prev,
+            { id: model, name: model.split('/').pop()?.replace(/-/g, ' ') || model },
+          ]);
+        }
+      } catch (err) {
+        console.error('Failed to load models:', err);
+        // Fallback to default models if API fails
+        setModels([
+          { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5' },
+          { id: 'claude-opus-4-5-20250514', name: 'Claude Opus 4.5' },
+          { id: 'claude-haiku-3-5-20241022', name: 'Claude Haiku 3.5' },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchModels();
+  }, [model]);
 
   const handleSave = () => {
     if (!apiKey.trim() && !envApiKeyAvailable) {
@@ -132,11 +169,20 @@ export default function SettingsModal({
               id="model"
               value={model}
               onChange={(e) => setModel(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={isLoading}
             >
-              <option value="claude-sonnet-4-5-20250929">Claude Sonnet 4.5</option>
-              <option value="claude-opus-4-5-20250514">Claude Opus 4.5</option>
-              <option value="claude-haiku-3-5-20241022">Claude Haiku 3.5</option>
+              {isLoading ? (
+                <option>Loading models...</option>
+              ) : models.length > 0 ? (
+                models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))
+              ) : (
+                <option value="">No models available</option>
+              )}
             </select>
           </div>
 

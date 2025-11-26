@@ -3,7 +3,6 @@ import { MemoryOperationEvent, MemoryFile } from '@/types';
 import { useMemoryContext } from '@/lib/contexts/MemoryContext';
 
 interface UseMemoryOperationHandlerOptions {
-  memoryFiles: MemoryFile[];
   setMemoryFiles: React.Dispatch<React.SetStateAction<MemoryFile[]>>;
   selectedFile: MemoryFile | null;
   refreshMemoryFiles: () => Promise<void>;
@@ -14,10 +13,9 @@ interface UseMemoryOperationHandlerOptions {
 
 /**
  * Custom hook to handle memory operations from SSE stream
- * Extracted from MemoryBrowser to improve reusability and testability
+ * Updates UI timestamps from SSE event timestamps (not filesystem timestamps)
  */
 export function useMemoryOperationHandler({
-  memoryFiles,
   setMemoryFiles,
   selectedFile,
   refreshMemoryFiles,
@@ -30,31 +28,19 @@ export function useMemoryOperationHandler({
   const handleOperation = useCallback(
     async (event: MemoryOperationEvent) => {
       console.log('[useMemoryOperationHandler] Handling operation:', event);
+      const timestamp = event.timestamp;
 
       switch (event.operation) {
-        case 'create':
-          await refreshMemoryFiles();
-          // Mark new file
-          setMemoryFiles((prev) =>
-            prev.map((f) =>
-              f.path === event.path
-                ? { ...f, isNew: true, lastOperation: 'create', operationTimestamp: event.timestamp }
-                : f
-            )
-          );
-          break;
-
         case 'read':
-          await refreshMemoryFiles();
-          // Mark file with read operation for animation
+          // For reads, just update timestamp in place - no need to refresh file list
           setMemoryFiles((prev) =>
             prev.map((f) =>
               f.path === event.path
-                ? { ...f, lastOperation: 'read', operationTimestamp: event.timestamp }
+                ? { ...f, lastOperation: 'read', lastAccessedByLLM: timestamp }
                 : f
             )
           );
-          // Clear animation after it completes (1 second)
+          // Clear animation after 1 second
           setTimeout(() => {
             setMemoryFiles((prev) =>
               prev.map((f) =>
@@ -64,21 +50,38 @@ export function useMemoryOperationHandler({
               )
             );
           }, 1000);
-          if (selectedFile?.path === event.path && triggerHDDLight) {
+          // Trigger HDD light for any read (not just selected file)
+          if (triggerHDDLight) {
             triggerHDDLight('read');
           }
           break;
 
-        case 'update':
+        case 'create':
+          // Refresh to get new file, then mark it
           await refreshMemoryFiles();
           setMemoryFiles((prev) =>
             prev.map((f) =>
               f.path === event.path
-                ? { ...f, isNew: false, lastOperation: 'update', operationTimestamp: event.timestamp }
+                ? { ...f, isNew: true, lastOperation: 'create', lastModifiedByLLM: timestamp }
                 : f
             )
           );
-          // Clear animation after it completes (1 second)
+          if (triggerHDDLight) {
+            triggerHDDLight('write');
+          }
+          break;
+
+        case 'update':
+          // Refresh to get updated content/size, then update timestamp
+          await refreshMemoryFiles();
+          setMemoryFiles((prev) =>
+            prev.map((f) =>
+              f.path === event.path
+                ? { ...f, isNew: false, lastOperation: 'update', lastModifiedByLLM: timestamp }
+                : f
+            )
+          );
+          // Clear animation after 1 second
           setTimeout(() => {
             setMemoryFiles((prev) =>
               prev.map((f) =>
@@ -88,13 +91,14 @@ export function useMemoryOperationHandler({
               )
             );
           }, 1000);
+          // Show update banner if viewing this file
           if (selectedFile?.path === event.path) {
             if (setShowUpdateBanner) {
               setShowUpdateBanner(true);
             }
-            if (triggerHDDLight) {
-              triggerHDDLight('write');
-            }
+          }
+          if (triggerHDDLight) {
+            triggerHDDLight('write');
           }
           break;
 

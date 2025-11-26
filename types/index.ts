@@ -17,11 +17,12 @@ export interface MemoryFile {
   name: string;
   path: string;
   size: number;
-  modified: string;
-  accessed?: string;
+  modified: string;             // Filesystem mtime (fallback for initial display)
+  accessed?: string;            // Filesystem atime (fallback for initial display)
   isNew?: boolean;
   lastOperation?: 'create' | 'read' | 'update' | 'delete' | 'rename';
-  operationTimestamp?: string;
+  lastAccessedByLLM?: string;   // From SSE event timestamp (takes priority)
+  lastModifiedByLLM?: string;   // From SSE event timestamp (takes priority)
 }
 
 export interface Session {

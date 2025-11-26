@@ -82,7 +82,6 @@ export default function MemoryBrowser() {
 
   // Handle memory operations using custom hook
   useMemoryOperationHandler({
-    memoryFiles,
     setMemoryFiles,
     selectedFile,
     refreshMemoryFiles,
@@ -167,14 +166,12 @@ export default function MemoryBrowser() {
                     )}
 
                     <div className="mt-1 space-y-0.5 text-xs text-gray-600">
-                      <div className={file.lastOperation === 'update' ? 'animate-flash-write' : ''}>
-                        Last updated: {formatRelativeTime(file.modified)}
+                      <div className={file.lastOperation === 'update' || file.lastOperation === 'create' ? 'animate-flash-write' : ''}>
+                        Last updated: {file.lastModifiedByLLM ? formatRelativeTime(file.lastModifiedByLLM) : '—'}
                       </div>
-                      {file.accessed && (
-                        <div className={file.lastOperation === 'read' ? 'animate-flash-read' : ''}>
-                          Last accessed: {formatRelativeTime(file.accessed)}
-                        </div>
-                      )}
+                      <div className={file.lastOperation === 'read' ? 'animate-flash-read' : ''}>
+                        Last accessed: {file.lastAccessedByLLM ? formatRelativeTime(file.lastAccessedByLLM) : '—'}
+                      </div>
                     </div>
 
                     <div className="text-xs text-gray-500 mt-1">

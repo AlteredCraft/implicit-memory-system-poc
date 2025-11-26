@@ -109,6 +109,15 @@ export const api = {
     return response.json();
   },
 
+  // Model endpoints
+  async getModels() {
+    const response = await fetch(`${API_BASE}/api/models`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch models');
+    }
+    return response.json();
+  },
+
   // Health endpoint
   async getHealth() {
     const response = await fetch(`${API_BASE}/api/health`);
