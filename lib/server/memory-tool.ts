@@ -10,6 +10,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { betaTool } from '@anthropic-ai/sdk/helpers/beta/json-schema';
 import { SessionTrace } from './session-trace';
 import { MemoryOperationLogger, MemoryOperationType } from './memory-operation-logger';
 
@@ -577,6 +578,19 @@ export class LocalFilesystemMemoryTool {
         required: ['command']
       }
     };
+  }
+
+  // Convert to a runnable tool for use with toolRunner
+  toRunnableTool() {
+    const self = this;
+    return betaTool({
+      name: 'memory',
+      description: 'Manage persistent memory storage for the conversation',
+      inputSchema: this.toAnthropicTool().input_schema as any,
+      run: (input: any) => {
+        return self.execute(input);
+      }
+    });
   }
 
   // Execute a tool call

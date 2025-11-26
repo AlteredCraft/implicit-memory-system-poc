@@ -67,68 +67,27 @@ export class ConversationManager {
         data: 'Processing...'
       };
 
-      // Create the message with tool support
-      const response = await this.client.messages.create({
+      // Use toolRunner - handles the agentic loop automatically
+      const runner = this.client.beta.messages.toolRunner({
         model: this.model,
         max_tokens: 2048,
         system: this.systemPrompt,
         messages: this.messages as any,
-        tools: [this.memoryTool.toAnthropicTool()],
+        tools: [this.memoryTool.toRunnableTool()],
       });
 
-      // Handle tool uses
-      let currentMessages = [...this.messages];
-      let currentResponse = response;
-      let iterationCount = 0;
-      const maxIterations = 10; // Prevent infinite loops
-
-      while (currentResponse.stop_reason === 'tool_use' && iterationCount < maxIterations) {
-        iterationCount++;
-
-        // Add assistant's response with tool uses to messages
-        currentMessages.push({
-          role: 'assistant',
-          content: currentResponse.content
-        });
-
-        // Process each tool use
-        const toolResults: any[] = [];
-
-        for (const content of currentResponse.content) {
+      // Iterate over messages from the runner to capture tool calls
+      for await (const message of runner) {
+        // Log tool calls to trace
+        for (const content of message.content) {
           if (content.type === 'tool_use') {
+            const toolInput = content.input as Record<string, any>;
             console.log(`[ConversationManager] Tool use detected: ${content.name}`);
-
-            try {
-              // Execute the tool
-              const result = this.memoryTool.execute(content.input);
-
-              toolResults.push({
-                type: 'tool_result',
-                tool_use_id: content.id,
-                content: result
-              });
-            } catch (error: any) {
-              console.error(`[ConversationManager] Tool execution error:`, error);
-
-              toolResults.push({
-                type: 'tool_result',
-                tool_use_id: content.id,
-                content: `Error: ${error.message}`,
-                is_error: true
-              });
-            }
+            this.trace.logToolCall('memory', toolInput.command, toolInput);
           }
         }
 
-        // Add tool results to messages
-        if (toolResults.length > 0) {
-          currentMessages.push({
-            role: 'user',
-            content: toolResults
-          });
-        }
-
-        // Get memory operations and emit them
+        // Emit memory operations for UI updates
         const memoryOperations = this.memoryTool.getAndClearRecentOperations();
         for (const operation of memoryOperations) {
           console.log(`[ConversationManager] Emitting memory operation: ${operation.operation} on ${operation.path}`);
@@ -137,20 +96,14 @@ export class ConversationManager {
             data: operation
           };
         }
-
-        // Continue the conversation
-        currentResponse = await this.client.messages.create({
-          model: this.model,
-          max_tokens: 2048,
-          system: this.systemPrompt,
-          messages: currentMessages as any,
-          tools: [this.memoryTool.toAnthropicTool()],
-        });
       }
 
-      // Extract final response text
+      // Get final result - toolRunner ensures we get a complete response
+      const finalMessage = await runner;
+
+      // Extract final text from the complete message
       let responseText = '';
-      for (const content of currentResponse.content) {
+      for (const content of finalMessage.content) {
         if (content.type === 'text') {
           responseText = content.text;
           break;
@@ -164,16 +117,15 @@ export class ConversationManager {
       };
 
       // Update messages with final response
-      this.messages = currentMessages;
       this.messages.push({ role: 'assistant', content: responseText });
       this.trace.logLlmResponse(responseText);
 
-      // Track token usage
-      const usage = currentResponse.usage;
-      const lastInput = usage.input_tokens;
-      const lastOutput = usage.output_tokens;
-      const lastCacheRead = (usage as any).cache_read_input_tokens || 0;
-      const lastCacheWrite = (usage as any).cache_creation_input_tokens || 0;
+      // Track token usage from final message
+      const usage = finalMessage.usage;
+      const lastInput = usage?.input_tokens || 0;
+      const lastOutput = usage?.output_tokens || 0;
+      const lastCacheRead = (usage as any)?.cache_read_input_tokens || 0;
+      const lastCacheWrite = (usage as any)?.cache_creation_input_tokens || 0;
 
       this.totalInputTokens += lastInput;
       this.totalOutputTokens += lastOutput;
