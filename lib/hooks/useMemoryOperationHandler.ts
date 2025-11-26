@@ -40,7 +40,7 @@ export function useMemoryOperationHandler({
                 : f
             )
           );
-          // Clear animation after 1 second
+          // Clear animation after 1.5 seconds
           setTimeout(() => {
             setMemoryFiles((prev) =>
               prev.map((f) =>
@@ -49,7 +49,7 @@ export function useMemoryOperationHandler({
                   : f
               )
             );
-          }, 1000);
+          }, 1500);
           // Trigger HDD light for any read (not just selected file)
           if (triggerHDDLight) {
             triggerHDDLight('read');
@@ -81,7 +81,7 @@ export function useMemoryOperationHandler({
                 : f
             )
           );
-          // Clear animation after 1 second
+          // Clear animation after 1.5 seconds
           setTimeout(() => {
             setMemoryFiles((prev) =>
               prev.map((f) =>
@@ -90,7 +90,7 @@ export function useMemoryOperationHandler({
                   : f
               )
             );
-          }, 1000);
+          }, 1500);
           // Show update banner if viewing this file
           if (selectedFile?.path === event.path) {
             if (setShowUpdateBanner) {

@@ -166,10 +166,10 @@ export default function MemoryBrowser() {
                     )}
 
                     <div className="mt-1 space-y-0.5 text-xs text-gray-600">
-                      <div className={file.lastOperation === 'update' || file.lastOperation === 'create' ? 'animate-flash-write' : ''}>
+                      <div className={`rounded px-1 ${file.lastOperation === 'update' || file.lastOperation === 'create' ? 'animate-flash-write' : ''}`}>
                         Last updated: {file.lastModifiedByLLM ? formatRelativeTime(file.lastModifiedByLLM) : '—'}
                       </div>
-                      <div className={file.lastOperation === 'read' ? 'animate-flash-read' : ''}>
+                      <div className={`rounded px-1 ${file.lastOperation === 'read' ? 'animate-flash-read' : ''}`}>
                         Last accessed: {file.lastAccessedByLLM ? formatRelativeTime(file.lastAccessedByLLM) : '—'}
                       </div>
                     </div>
@@ -213,26 +213,26 @@ export default function MemoryBrowser() {
           </div>
 
           {/* HDD Lights Panel */}
-          <div className="flex gap-5 justify-center py-2 px-3 mb-2 rounded bg-gradient-to-b from-gray-700 to-gray-800 border-b-2 border-gray-900">
+          <div className="flex gap-6 justify-center py-3 px-4 mb-2 rounded bg-gradient-to-b from-gray-700 to-gray-800 border-b-2 border-gray-900">
             <div className="flex items-center gap-2">
               <div
-                className={`w-3 h-3 rounded-full border border-gray-600 transition-all ${
+                className={`w-4 h-4 rounded-full border-2 transition-all ${
                   readLightActive
-                    ? 'bg-green-400 shadow-[0_0_10px_#4ade80] animate-flicker'
-                    : 'bg-gray-600'
+                    ? 'bg-green-400 border-green-300 shadow-[0_0_8px_#4ade80,0_0_16px_#4ade80,0_0_24px_#22c55e,0_0_32px_#22c55e] animate-flicker'
+                    : 'bg-gray-600 border-gray-500'
                 }`}
               ></div>
-              <span className="text-white text-[10px] font-bold tracking-wider">READ</span>
+              <span className={`text-[11px] font-bold tracking-wider transition-colors ${readLightActive ? 'text-green-400' : 'text-gray-400'}`}>READ</span>
             </div>
             <div className="flex items-center gap-2">
               <div
-                className={`w-3 h-3 rounded-full border border-gray-600 transition-all ${
+                className={`w-4 h-4 rounded-full border-2 transition-all ${
                   writeLightActive
-                    ? 'bg-orange-500 shadow-[0_0_10px_#f97316] animate-flicker'
-                    : 'bg-gray-600'
+                    ? 'bg-orange-400 border-orange-300 shadow-[0_0_8px_#fb923c,0_0_16px_#fb923c,0_0_24px_#f97316,0_0_32px_#f97316] animate-flicker'
+                    : 'bg-gray-600 border-gray-500'
                 }`}
               ></div>
-              <span className="text-white text-[10px] font-bold tracking-wider">WRITE</span>
+              <span className={`text-[11px] font-bold tracking-wider transition-colors ${writeLightActive ? 'text-orange-400' : 'text-gray-400'}`}>WRITE</span>
             </div>
           </div>
 
