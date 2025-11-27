@@ -121,12 +121,29 @@ body {
   animation: flicker 1.5s ease-in-out;
 }
 
+/* MEMOP Console animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
 /* Respect reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
   .animate-slide-in-from-top,
   .animate-flash-read,
   .animate-flash-write,
-  .animate-flicker {
+  .animate-flicker,
+  .animate-fade-in {
     animation: none;
   }
 }
