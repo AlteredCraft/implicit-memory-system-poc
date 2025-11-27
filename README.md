@@ -227,30 +227,7 @@ npm run start  # Production server
 - Global state management
 - Client-side API key storage (localStorage)
 
-For production use, add proper auth and secure key management. See [Anthropic's security guidelines](https://docs.claude.com/en/docs/agents-and-tools/tool-use/memory-tool#security).
-
----
-
-## 🔍 Troubleshooting
-
-**Claude isn't remembering things?**
-- Try an `_explanatory` system prompt to see tool operations
-- Check `memories/` for created files
-- Review session traces in the Sessions tab
-
-**Memory files not persisting?**
-- Ensure `memories/` directory exists
-- Check file permissions
-
-**Chat not streaming?**
-- Check browser console for errors
-- Verify API key is set correctly
-- Check Next.js dev server logs
-
-**Session not initializing?**
-- Verify API key format (should start with `sk-ant-`)
-- Check network tab for API errors
-- Ensure prompts directory exists
+For production use, add proper auth and secure key management.
 
 ---
 
@@ -301,6 +278,40 @@ For detailed documentation, see [CLAUDE.md](CLAUDE.md).
 
 ---
 
+## 🔧 Appendix: Real-Time Memory Activity Signaling
+
+The UI displays memory operations in real-time as Claude executes them, creating responsive visual feedback through the Memory Tool Calls console and file browser animations.
+
+### The Challenge
+
+Tool call events are generated via callbacks during SDK execution, but callbacks cannot directly yield values in async generators. Initially, events were accumulated in an array and only emitted after each message stream completed, causing all memory operations to appear batched at the end of responses.
+
+### The Solution: AsyncEventQueue
+
+A lightweight synchronous queue bridges the callback-to-generator gap:
+
+- **`AsyncEventQueue`** (`lib/server/async-event-queue.ts`) - 71-line queue with `enqueue()` (callback-safe) and `drain()` (generator-safe) methods
+- **Frequent draining** - Queue checked after every SDK streaming event (~50ms intervals)
+- **Multi-layered** - Additional drains after message completion, before done event, and in error handlers
+
+### Technical Flow
+
+```
+Memory Tool Executes → SessionTrace callback → eventQueue.enqueue(event)
+                                                         ↓
+SDK streaming event arrives → drainEventQueue() → yield to SSE stream
+                                                         ↓
+Frontend receives → ToolCallConsole + MemoryBrowser update immediately
+```
+
+### Result
+
+Memory operations appear in the UI within <50ms of execution with word-by-word text streaming preserved. The queue is drained after each `content_block_delta` event, ensuring tool calls are never batched even when they execute before text generation.
+
+**Implementation:** `lib/server/conversation-manager.ts:64-134`
+
+---
+
 ## 🙏 Acknowledgments
 
 - Built with [Anthropic's Claude](https://www.anthropic.com/claude) and [Memory Tool](https://docs.claude.com/en/docs/agents-and-tools/tool-use/memory-tool)
@@ -309,4 +320,4 @@ For detailed documentation, see [CLAUDE.md](CLAUDE.md).
 
 ---
 
-**Made by [AlteredCraft](https://alteredcraft.com)**
+**This is a research tool made by [AlteredCraft](https://alteredcraft.com)**

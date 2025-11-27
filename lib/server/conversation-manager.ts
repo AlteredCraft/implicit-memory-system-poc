@@ -6,6 +6,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { LocalFilesystemMemoryTool } from './memory-tool';
 import { SessionTrace } from './session-trace';
+import { AsyncEventQueue } from './async-event-queue';
 
 export interface StreamEvent {
   type: 'thinking' | 'tool_call' | 'text' | 'text_delta' | 'done' | 'error';
@@ -31,7 +32,7 @@ export class ConversationManager {
   private memoryTool: LocalFilesystemMemoryTool;
   private messages: Message[] = [];
   private trace: SessionTrace;
-  private traceEvents: Array<{ type: string; data: any }> = [];
+  private eventQueue: AsyncEventQueue<{ type: string; data: any }>;
 
   // Token tracking
   private totalInputTokens = 0;
@@ -45,16 +46,31 @@ export class ConversationManager {
     this.systemPrompt = systemPrompt;
     this.memoryTool = new LocalFilesystemMemoryTool();
 
+    // Initialize event queue for real-time streaming
+    this.eventQueue = new AsyncEventQueue();
+
     // Initialize session trace with callback to capture events
     this.trace = new SessionTrace(
       './sessions',
       model,
       systemPrompt,
-      (event) => this.traceEvents.push(event)
+      (event) => this.eventQueue.enqueue(event)
     );
     this.memoryTool.setTrace(this.trace);
 
     console.log(`[ConversationManager] Initialized with model: ${model}`);
+  }
+
+  /**
+   * Helper generator to drain queued tool call events
+   */
+  private *drainEventQueue(): Generator<StreamEvent, void, undefined> {
+    for (const traceEvent of this.eventQueue.drain()) {
+      yield {
+        type: traceEvent.type as 'tool_call',
+        data: traceEvent.data
+      };
+    }
   }
 
   async *sendMessageStreaming(userMessage: string): AsyncGenerator<StreamEvent> {
@@ -112,6 +128,10 @@ export class ConversationManager {
               console.log(`[ConversationManager] Tool use started: ${contentBlock.name}`);
             }
           }
+
+          // Drain tool call events after every SDK event (real-time streaming)
+          // This ensures tool calls are emitted immediately, even before text generation
+          yield* this.drainEventQueue();
         }
 
         // Get the final message from this stream for tool logging
@@ -130,15 +150,8 @@ export class ConversationManager {
           }
         }
 
-        // Emit accumulated trace events (tool_call events from SessionTrace callback)
-        while (this.traceEvents.length > 0) {
-          const traceEvent = this.traceEvents.shift()!;
-          console.log(`[ConversationManager] Emitting trace event: ${traceEvent.type}`);
-          yield {
-            type: traceEvent.type as 'tool_call',
-            data: traceEvent.data
-          };
-        }
+        // Drain any remaining tool call events after this message completes
+        yield* this.drainEventQueue();
       }
 
       // Get final result from runner
@@ -172,6 +185,9 @@ export class ConversationManager {
         this.totalCacheWriteTokens
       );
 
+      // Final drain to ensure all events are sent before completion
+      yield* this.drainEventQueue();
+
       // Send final done event with token info
       yield {
         type: 'done',
@@ -191,6 +207,9 @@ export class ConversationManager {
     } catch (error: any) {
       console.error(`[ConversationManager] Error in conversation:`, error);
       this.trace.logError(error.constructor.name, error.message);
+
+      // Drain any remaining events before error
+      yield* this.drainEventQueue();
 
       yield {
         type: 'error',
@@ -213,8 +232,8 @@ export class ConversationManager {
     this.totalCacheReadTokens = 0;
     this.totalCacheWriteTokens = 0;
 
-    // Clear trace events queue
-    this.traceEvents = [];
+    // Reset event queue
+    this.eventQueue = new AsyncEventQueue();
 
     // Start new trace with callback
     this.trace.finalize();
@@ -222,7 +241,7 @@ export class ConversationManager {
       './sessions',
       this.model,
       this.systemPrompt,
-      (event) => this.traceEvents.push(event)
+      (event) => this.eventQueue.enqueue(event)
     );
     this.memoryTool.setTrace(this.trace);
 
