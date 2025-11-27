@@ -9,6 +9,7 @@ import { useToolCallContext } from '@/lib/contexts/ToolCallContext';
 interface ChatProps {
   sessionActive: boolean;
   modelName: string;
+  sessionKey: number;
 }
 
 interface Message {
@@ -17,7 +18,7 @@ interface Message {
   toolUses?: string[];
 }
 
-export default function Chat({ sessionActive, modelName }: ChatProps) {
+export default function Chat({ sessionActive, modelName, sessionKey }: ChatProps) {
   const { triggerMemoryOperation } = useMemoryContext();
   const { triggerToolCall } = useToolCallContext();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -36,6 +37,15 @@ export default function Chat({ sessionActive, modelName }: ChatProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages, currentAssistantMessage]);
+
+  // Clear all chat state when session is reinitialized
+  useEffect(() => {
+    setMessages([]);
+    setCurrentAssistantMessage('');
+    setCurrentToolUses([]);
+    setIsStreaming(false);
+    setTokens(null);
+  }, [sessionKey]);
 
   const addSystemMessage = useCallback((text: string, type: 'info' | 'warning' | 'danger' = 'info') => {
     setMessages((prev) => [...prev, { role: 'system', content: text }]);

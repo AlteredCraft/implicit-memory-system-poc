@@ -73,7 +73,11 @@ function formatParameters(params: Record<string, any>, command: string): string 
   return parts.join(' ');
 }
 
-export default function ToolCallConsole() {
+interface ToolCallConsoleProps {
+  sessionKey: number;
+}
+
+export default function ToolCallConsole({ sessionKey }: ToolCallConsoleProps) {
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const nextIdRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -99,6 +103,11 @@ export default function ToolCallConsole() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [entries]);
+
+  // Clear console when session is reinitialized
+  useEffect(() => {
+    setEntries([]);
+  }, [sessionKey]);
 
   const clearConsole = useCallback(() => {
     setEntries([]);

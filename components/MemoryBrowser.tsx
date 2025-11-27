@@ -8,7 +8,11 @@ import { useMemoryOperationHandler } from '@/lib/hooks/useMemoryOperationHandler
 import CurrentSessionBox from './CurrentSessionBox';
 import ToolCallConsole from './ToolCallConsole';
 
-export default function MemoryBrowser() {
+interface MemoryBrowserProps {
+  sessionKey: number;
+}
+
+export default function MemoryBrowser({ sessionKey }: MemoryBrowserProps) {
   const [memoryFiles, setMemoryFiles] = useState<MemoryFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<MemoryFile | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
@@ -134,7 +138,7 @@ export default function MemoryBrowser() {
       <CurrentSessionBox />
 
       {/* Tool Call Console */}
-      <ToolCallConsole />
+      <ToolCallConsole sessionKey={sessionKey} />
 
       <div className="flex-1 overflow-y-auto p-3">
         {memoryFiles.length === 0 ? (

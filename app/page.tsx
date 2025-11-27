@@ -22,6 +22,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'chat' | 'sessions'>('chat');
   const [envApiKeyAvailable, setEnvApiKeyAvailable] = useState(false);
   const [envApiKeyMasked, setEnvApiKeyMasked] = useState<string | null>(null);
+  const [sessionKey, setSessionKey] = useState(0);
 
   useEffect(() => {
     // Load settings from localStorage
@@ -88,6 +89,7 @@ export default function Home() {
       await api.initializeSession(key, mdl, promptFile);
       setSessionActive(true);
       setConnectionStatus('connected');
+      setSessionKey(prev => prev + 1); // Increment to trigger chat reset
       console.log('Session initialized successfully');
     } catch (error: any) {
       console.error('Failed to initialize session:', error);
@@ -107,6 +109,12 @@ export default function Home() {
 
     initializeSession(key, mdl, promptFile);
     setShowSettings(false);
+  };
+
+  const getPromptDisplayName = () => {
+    if (!systemPromptFile) return 'No prompt selected';
+    const filename = systemPromptFile.split('/').pop() || systemPromptFile;
+    return filename.replace('.txt', '');
   };
 
   const getStatusBadge = () => {
@@ -158,16 +166,6 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-3">
               {getStatusBadge()}
-              <button
-                onClick={() => setShowSettings(true)}
-                className="px-3 py-1 border border-white hover:bg-white hover:text-gray-900 rounded transition-colors flex items-center gap-2 text-sm"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                  <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z" />
-                  <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z" />
-                </svg>
-                Settings
-              </button>
             </div>
           </div>
         </nav>
@@ -177,39 +175,61 @@ export default function Home() {
           {/* Left Panel: Chat/Sessions */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Tabs */}
-            <div className="border-b border-gray-200 bg-white flex-shrink-0">
-              <div className="flex">
-                <button
-                  onClick={() => setActiveTab('chat')}
-                  className={`px-6 py-3 font-medium border-b-2 transition-colors ${activeTab === 'chat'
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+            <div className="border-b border-gray-200 bg-gray-50 flex-shrink-0">
+              <div className="flex items-center justify-between px-2 pt-2">
+                {/* Left: Tabs */}
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setActiveTab('chat')}
+                    className={`px-4 py-2 font-medium rounded-t-lg transition-all ${
+                      activeTab === 'chat'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'bg-transparent text-gray-600 hover:bg-gray-100'
                     }`}
-                >
-                  <svg className="inline w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z" />
-                  </svg>
-                  Chat
-                </button>
-                <button
-                  onClick={() => setActiveTab('sessions')}
-                  className={`px-6 py-3 font-medium border-b-2 transition-colors ${activeTab === 'sessions'
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  >
+                    <svg className="inline w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z" />
+                    </svg>
+                    Chat
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('sessions')}
+                    className={`px-4 py-2 font-medium rounded-t-lg transition-all ${
+                      activeTab === 'sessions'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'bg-transparent text-gray-600 hover:bg-gray-100'
                     }`}
-                >
-                  <svg className="inline w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2z" />
-                  </svg>
-                  Sessions
-                </button>
+                  >
+                    <svg className="inline w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2z" />
+                    </svg>
+                    Session History
+                  </button>
+                </div>
+
+                {/* Right: Prompt name and Settings button */}
+                <div className="flex items-center gap-3 pr-2">
+                  <span className="text-sm text-gray-600 font-medium">
+                    {getPromptDisplayName()}
+                  </span>
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    className="px-3 py-1.5 border border-gray-300 hover:bg-gray-100 rounded text-sm flex items-center gap-2 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z" />
+                      <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z" />
+                    </svg>
+                    Settings
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Tab Content */}
             <div className="flex-1 overflow-hidden">
               <div className={activeTab === 'chat' ? 'h-full' : 'hidden'}>
-                <Chat sessionActive={sessionActive} modelName={model} />
+                <Chat sessionActive={sessionActive} modelName={model} sessionKey={sessionKey} />
               </div>
               <div className={activeTab === 'sessions' ? 'h-full' : 'hidden'}>
                 <Sessions />
@@ -219,7 +239,7 @@ export default function Home() {
 
           {/* Right Panel: Memory Browser */}
           <div className="w-[32rem] flex-shrink-0">
-            <MemoryBrowser />
+            <MemoryBrowser sessionKey={sessionKey} />
           </div>
         </div>
 
