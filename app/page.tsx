@@ -208,11 +208,12 @@ export default function Home() {
 
             {/* Tab Content */}
             <div className="flex-1 overflow-hidden">
-              {activeTab === 'chat' ? (
+              <div className={activeTab === 'chat' ? 'h-full' : 'hidden'}>
                 <Chat sessionActive={sessionActive} modelName={model} />
-              ) : (
+              </div>
+              <div className={activeTab === 'sessions' ? 'h-full' : 'hidden'}>
                 <Sessions />
-              )}
+              </div>
             </div>
           </div>
 
