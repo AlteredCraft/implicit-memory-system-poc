@@ -163,7 +163,7 @@ export default function ToolCallConsole({ sessionKey }: ToolCallConsoleProps) {
               return (
                 <div
                   key={entry.id}
-                  className={`flex items-center gap-2 py-0.5 ${isNew ? 'animate-fade-in' : ''}`}
+                  className={`flex items-center gap-2 py-0.5 px-2 -mx-2 rounded ${isNew ? 'animate-fade-in' : ''}`}
                 >
                   {/* Timestamp */}
                   <span className="text-gray-400 tabular-nums shrink-0 text-xs">
@@ -179,7 +179,8 @@ export default function ToolCallConsole({ sessionKey }: ToolCallConsoleProps) {
                   <span
                     className={`uppercase text-xs font-medium shrink-0 ${cmdColor}`}
                     style={{
-                      textShadow: isNew ? `0 0 8px currentColor` : 'none',
+                      textShadow: isNew ? `0 0 12px currentColor, 0 0 24px currentColor` : 'none',
+                      fontWeight: isNew ? '700' : '500',
                     }}
                   >
                     {entry.command}
