@@ -43,5 +43,5 @@ next-env.d.ts
 
 ## App specific
 /sessions/
-/memory/
+/memories/
 /logs/

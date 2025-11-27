@@ -64,7 +64,7 @@ Claude: For Leo's 5th birthday, here are some age-appropriate ideas...
 **How it works:**
 1. **You chat naturally** - No special commands needed
 2. **Claude decides what to remember** - Names, preferences, project details
-3. **Memory persists** - Stored as text files in `./memory/memories/`
+3. **Memory persists** - Stored as text files in `./memories/`
 4. **Automatic recall** - Claude retrieves relevant memories when needed
 
 ### 📊 Session Recording & Analysis
@@ -125,7 +125,7 @@ lib/
 types/                   # TypeScript type definitions
 
 prompts/                 # System prompt templates
-memory/memories/         # Active memory storage (gitignored)
+memories/                # Active memory storage (gitignored)
 sessions/                # Session traces (gitignored)
 ```
 
@@ -169,7 +169,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ### Storage Locations
 
-- **Memory files:** `./memory/memories/` (plain text, gitignored)
+- **Memory files:** `./memories/` (plain text, gitignored)
 - **Session traces:** `./sessions/` (JSON, gitignored)
 - **Prompts:** `./prompts/` (versioned in git)
 
@@ -235,11 +235,11 @@ For production use, add proper auth and secure key management. See [Anthropic's 
 
 **Claude isn't remembering things?**
 - Try an `_explanatory` system prompt to see tool operations
-- Check `memory/memories/` for created files
+- Check `memories/` for created files
 - Review session traces in the Sessions tab
 
 **Memory files not persisting?**
-- Ensure `memory/memories/` directory exists
+- Ensure `memories/` directory exists
 - Check file permissions
 
 **Chat not streaming?**
@@ -288,7 +288,7 @@ The `LocalFilesystemMemoryTool` class implements Anthropic's [Memory Tool API](h
 
 ### Storage & Organization
 
-Memory files are stored in `./memory/memories/` as plain text. Claude autonomously decides the file structure (flat or hierarchical) and naming conventions.
+Memory files are stored in `./memories/` as plain text. Claude autonomously decides the file structure (flat or hierarchical) and naming conventions.
 
 ### Implementation Files
 

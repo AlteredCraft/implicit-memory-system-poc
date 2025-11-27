@@ -8,7 +8,7 @@ export async function GET(
 ) {
   const { path: pathSegments } = await params;
   const filePath = pathSegments.join('/');
-  const fullPath = path.join(process.cwd(), 'memory', 'memories', filePath);
+  const fullPath = path.join(process.cwd(), 'memories', filePath);
 
   if (!fs.existsSync(fullPath)) {
     return NextResponse.json(

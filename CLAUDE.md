@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Memory System v2** - A demonstration application for Claude's autonomous memory management using Anthropic's Memory Tool. Claude decides what to remember without explicit user commands, showcasing the evolution from explicit commands to implicit trust.
 
 - **Related Article**: https://alteredcraft.com/p/the-memory-illusion-teaching-your
-- **Memory Storage**: Plain text files in `./memory/memories/` for transparency
+- **Memory Storage**: Plain text files in `./memories/` for transparency
 - **Session Recording**: All interactions traced to `./sessions/` as JSON
 - **Architecture**: Single-user POC (not production-ready - no auth, global state)
 
@@ -109,7 +109,7 @@ types/
   index.ts           # TypeScript type definitions
 
 prompts/             # System prompt templates
-memory/memories/     # Active memory storage (gitignored)
+memories/            # Active memory storage (gitignored)
 sessions/            # Session trace JSON files (gitignored)
 
 ```
@@ -163,7 +163,7 @@ Central coordinator for message handling (server-side TypeScript):
 ### LocalFilesystemMemoryTool (`lib/server/memory-tool.ts`)
 
 File-based memory storage implementation (server-side TypeScript):
-- Storage location: `./memory/memories/`
+- Storage location: `./memories/`
 - Security: Path traversal protection via `_validatePath()`
 - All operations logged to session trace
 - Supports: view, create, str_replace, insert, delete, rename

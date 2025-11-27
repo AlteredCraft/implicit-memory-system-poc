@@ -27,9 +27,9 @@ export class LocalFilesystemMemoryTool {
   private recentOperations: MemoryOperation[] = [];
   private logger: MemoryOperationLogger;
 
-  constructor(basePath: string = './memory', logDir: string = './logs') {
+  constructor(basePath: string = './memories', logDir: string = './logs') {
     this.basePath = basePath;
-    this.memoryRoot = path.join(basePath, 'memories');
+    this.memoryRoot = basePath;  // Use the base path directly as the memory root
 
     // Create memory directory if it doesn't exist
     if (!fs.existsSync(this.memoryRoot)) {

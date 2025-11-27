@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export async function GET() {
-  const memoryDir = path.join(process.cwd(), 'memory', 'memories');
+  const memoryDir = path.join(process.cwd(), 'memories');
 
   if (!fs.existsSync(memoryDir)) {
     return NextResponse.json({ files: [] });
