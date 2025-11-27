@@ -220,9 +220,6 @@ npm run build
 npm run start  # Production server
 ```
 
-### Deploy to Vercel
-```bash
-vercel deploy
 ```
 
 **Important:** This is a single-user POC with:
@@ -259,7 +256,8 @@ For production use, add proper auth and secure key management. See [Anthropic's 
 
 ## 📚 Learn More
 
-- **Article:** [The Memory Illusion v2: From Explicit Commands to Implicit Trust](https://alteredcraft.com/p/the-memory-illusion-teaching-your)
+- **Article:** [Implicit Memory Systems for LLMs : When Code Surrenders to Context
+](https://deepengineering.substack.com/p/implicit-memory-systems-for-llms)
 - **Anthropic Docs:** [Memory Tool](https://docs.claude.com/en/docs/agents-and-tools/tool-use/memory-tool)
 - **Architecture Details:** [CLAUDE.md](CLAUDE.md) - Comprehensive technical documentation
 - **Original v1:** [simple_llm_memory_poc](https://github.com/AlteredCraft/simple_llm_memory_poc)
@@ -267,9 +265,39 @@ For production use, add proper auth and secure key management. See [Anthropic's 
 
 ---
 
-## 📄 License
+## 🔧 Appendix: Memory Tool Implementation
 
-MIT License - see [LICENSE](LICENSE) for details
+The `LocalFilesystemMemoryTool` class implements Anthropic's [Memory Tool API](https://docs.claude.com/en/docs/agents-and-tools/tool-use/memory-tool) with a custom filesystem-based storage system. Located at `lib/server/memory-tool.ts`, it provides Claude with six autonomous memory operations for persistent, file-based memory management.
+
+### The Six Operations
+
+- **view** - Read files or list directory contents
+- **create** - Create new memory files (prevents overwrites)
+- **str_replace** - Find and replace text within files
+- **insert** - Insert text at specific line numbers
+- **delete** - Remove files or directories recursively
+- **rename** - Move or rename files/directories
+
+### Key Features
+
+- **Path validation** - Prevents directory traversal attacks via `_validatePath()` method
+- **Dual logging** - MemoryOperationLogger (`./logs/memory-operations.log`) + console output
+- **Session tracing** - All operations logged to session JSON files
+- **Real-time UI updates** - Operation tracking powers MemoryBrowser animations
+- **Integration** - Registered with ConversationManager and Anthropic's toolRunner
+
+### Storage & Organization
+
+Memory files are stored in `./memory/memories/` as plain text. Claude autonomously decides the file structure (flat or hierarchical) and naming conventions.
+
+### Implementation Files
+
+- **`lib/server/memory-tool.ts`** - Main implementation (618 lines)
+- **`lib/server/conversation-manager.ts`** - Tool instantiation and integration
+- **`lib/server/memory-operation-logger.ts`** - Dedicated logging system
+- **`lib/server/session-trace.ts`** - Session recording and tracing
+
+For detailed documentation, see [CLAUDE.md](CLAUDE.md).
 
 ---
 
@@ -281,4 +309,4 @@ MIT License - see [LICENSE](LICENSE) for details
 
 ---
 
-**Made with ❤️ by [AlteredCraft](https://alteredcraft.com)**
+**Made by [AlteredCraft](https://alteredcraft.com)**
