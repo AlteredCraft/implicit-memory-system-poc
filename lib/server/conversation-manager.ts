@@ -245,7 +245,21 @@ export class ConversationManager {
     );
     this.memoryTool.setTrace(this.trace);
 
+    // Notify listeners that session has changed
+    this.notifySessionChange();
+
     return result;
+  }
+
+  /**
+   * Notify global state listeners that the session has changed
+   * This is called when a new session is created (e.g., during memory clear)
+   */
+  private notifySessionChange(): void {
+    // Import here to avoid circular dependency issues
+    const { triggerSessionChange } = require('./global-state');
+    // Trigger notification with the new session ID
+    triggerSessionChange(this.getSessionId());
   }
 
   finalize(): string {

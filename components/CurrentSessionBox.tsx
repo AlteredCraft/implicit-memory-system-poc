@@ -14,18 +14,42 @@ export default function CurrentSessionBox() {
   const [showDiagramModal, setShowDiagramModal] = useState(false);
   const [diagram, setDiagram] = useState<string>('');
   const [isLoadingDiagram, setIsLoadingDiagram] = useState(false);
+  const [connectionState, setConnectionState] = useState<'connecting' | 'connected' | 'error'>('connecting');
 
-  // Fetch current session on mount
+  // Listen to session change events via SSE
   useEffect(() => {
-    const fetchCurrentSession = async () => {
+    console.log('[CurrentSessionBox] Connecting to session events...');
+    setConnectionState('connecting');
+    const eventSource = new EventSource('/api/session/events');
+
+    eventSource.onopen = () => {
+      console.log('[CurrentSessionBox] Connected to session events');
+      setConnectionState('connected');
+    };
+
+    eventSource.onmessage = (event) => {
       try {
-        const data = await api.getCurrentSession();
-        setSessionId(data.session_id);
+        const data = JSON.parse(event.data);
+        if (data.type === 'session_change') {
+          console.log('[CurrentSessionBox] Session changed:', data.data.session_id);
+          setSessionId(data.data.session_id);
+        }
       } catch (error) {
-        console.error('Failed to fetch current session:', error);
+        console.error('[CurrentSessionBox] Failed to parse session event:', error);
       }
     };
-    fetchCurrentSession();
+
+    eventSource.onerror = (error) => {
+      console.error('[CurrentSessionBox] SSE connection error:', error);
+      setConnectionState('error');
+      // EventSource will automatically try to reconnect
+    };
+
+    // Cleanup on unmount
+    return () => {
+      console.log('[CurrentSessionBox] Disconnecting from session events');
+      eventSource.close();
+    };
   }, []);
 
   const viewSessionDetails = useCallback(async () => {
