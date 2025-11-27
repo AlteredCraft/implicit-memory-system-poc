@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { MemoryFile } from '@/types';
 import { formatRelativeTime } from '@/lib/utils';
 import { useMemoryOperationHandler } from '@/lib/hooks/useMemoryOperationHandler';
+import CurrentSessionBox from './CurrentSessionBox';
 import ToolCallConsole from './ToolCallConsole';
 
 export default function MemoryBrowser() {
@@ -128,6 +129,9 @@ export default function MemoryBrowser() {
           </div>
         </div>
       </div>
+
+      {/* Current Session Box */}
+      <CurrentSessionBox />
 
       {/* Tool Call Console */}
       <ToolCallConsole />
