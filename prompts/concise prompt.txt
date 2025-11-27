@@ -1,4 +1,4 @@
-# System Prompt for Memory System v2
+# System Prompt for Implicit Memory System
 # Lines starting with # are comments and will be ignored
 # This prompt guides Claude to manage its memory autonomously
 

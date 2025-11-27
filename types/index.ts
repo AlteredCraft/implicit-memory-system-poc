@@ -1,4 +1,4 @@
-// Type definitions for Memory System v2
+// Type definitions for Implicit Memory System
 
 export interface AppState {
   sessionActive: boolean;

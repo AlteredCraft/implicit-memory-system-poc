@@ -1,4 +1,4 @@
-// API utility functions for Memory System v2
+// API utility functions for Implicit Memory System
 
 const API_BASE = '';
 

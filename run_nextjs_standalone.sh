@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-echo "🚀 Starting Memory System v2 - Next.js"
+echo "🚀 Starting Implicit Memory System - Next.js"
 echo "=================================================="
 echo ""
 echo "The Next.js application includes both frontend and backend."

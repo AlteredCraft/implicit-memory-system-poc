@@ -1,8 +1,14 @@
-# Memory System v2
+# Implicit Memory System
 
-**A Next.js demonstration of Claude's autonomous memory management** using Anthropic's Memory Tool. Claude decides what to remember from your conversations and manages its own persistent memory across sessions - no explicit commands needed.
+This is a research tool made by **[AlteredCraft](https://alteredcraft.com)**
 
-**Related Article:** [The Memory Illusion: Teaching Your LLM to Remember](https://alteredcraft.com/p/the-memory-illusion-teaching-your)
+**This is a demonstration app showing use of Claude's autonomous memory management** using Anthropic's Memory Tool. Claude decides what to remember from your conversations and manages its own persistent memory across sessions - no explicit commands needed.
+
+![alt text](docs/mem-app-ui.png)
+
+**Related Articles:** 
+- [The Memory Illusion: Teaching Your LLM to Remember](https://alteredcraft.com/p/the-memory-illusion-teaching-your)
+- [Implicit Memory Systems for LLMs](https://deepengineering.substack.com/p/implicit-memory-systems-for-llms)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -28,11 +34,6 @@ cp .env.example .env
 # 3. Run the app
 npm run dev
 # Open http://localhost:3000
-```
-
-Or use the convenience script:
-```bash
-./run_nextjs_standalone.sh
 ```
 
 ---
@@ -94,43 +95,6 @@ See [CLAUDE.md](CLAUDE.md) for detailed architecture documentation.
 
 ---
 
-## 📁 Project Structure
-
-```
-app/
-├── api/                 # Next.js API Routes (backend)
-│   ├── chat/            # SSE streaming endpoint
-│   ├── session/         # Session management
-│   ├── memory/          # Memory operations
-│   └── sessions/        # History & diagrams
-├── page.tsx             # Main UI
-├── layout.tsx           # Root layout
-└── globals.css          # Global styles with animations
-
-components/              # React components
-├── Chat.tsx             # Chat UI with SSE handling
-├── MemoryBrowser.tsx    # Memory file browser
-├── Sessions.tsx         # Session history
-└── SettingsModal.tsx    # Configuration modal
-
-lib/
-├── api.ts               # Frontend API client
-├── utils.ts             # Utility functions
-└── server/              # Backend modules
-    ├── conversation-manager.ts
-    ├── memory-tool.ts
-    ├── session-trace.ts
-    └── sequence-diagram.ts
-
-types/                   # TypeScript type definitions
-
-prompts/                 # System prompt templates
-memories/                # Active memory storage (gitignored)
-sessions/                # Session traces (gitignored)
-```
-
----
-
 ## 🎨 System Prompts
 
 Choose from different assistant personalities in the UI settings:
@@ -148,30 +112,6 @@ prompts/
 - They'll automatically appear in the UI selector
 - Lines starting with `#` are comments (stripped automatically)
 - Current date/time appended automatically
-
----
-
-## 🔧 Configuration
-
-### Environment Variables
-
-Create `.env` in the root directory:
-
-```bash
-# Your Anthropic API key (required)
-ANTHROPIC_API_KEY=sk-ant-...
-
-# Optional: Model selection (defaults to claude-sonnet-4-5-20250929)
-# ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
-```
-
-**Note:** The app stores API keys in browser localStorage (single-user POC). Server-side env vars are optional and only used for defaults.
-
-### Storage Locations
-
-- **Memory files:** `./memories/` (plain text, gitignored)
-- **Session traces:** `./sessions/` (JSON, gitignored)
-- **Prompts:** `./prompts/` (versioned in git)
 
 ---
 
@@ -197,37 +137,6 @@ Every conversation is recorded with complete observability:
 1. View any session in the UI
 2. Click "Generate Diagram"
 3. See Mermaid visualization of interaction flow
-
-Diagrams show:
-- User inputs and Claude responses
-- Memory tool operations (create, view, update, delete)
-- Tool execution results and errors
-- Chronological conversation turns
-
----
-
-
-## 🚢 Deployment
-
-### Local Development
-```bash
-npm run dev  # http://localhost:3000
-```
-
-### Production Build
-```bash
-npm run build
-npm run start  # Production server
-```
-
-```
-
-**Important:** This is a single-user POC with:
-- No authentication
-- Global state management
-- Client-side API key storage (localStorage)
-
-For production use, add proper auth and secure key management.
 
 ---
 
@@ -309,15 +218,3 @@ Frontend receives → ToolCallConsole + MemoryBrowser update immediately
 Memory operations appear in the UI within <50ms of execution with word-by-word text streaming preserved. The queue is drained after each `content_block_delta` event, ensuring tool calls are never batched even when they execute before text generation.
 
 **Implementation:** `lib/server/conversation-manager.ts:64-134`
-
----
-
-## 🙏 Acknowledgments
-
-- Built with [Anthropic's Claude](https://www.anthropic.com/claude) and [Memory Tool](https://docs.claude.com/en/docs/agents-and-tools/tool-use/memory-tool)
-- Powered by [Next.js](https://nextjs.org/) and [TypeScript](https://www.typescriptlang.org/)
-- Styled with [Tailwind CSS](https://tailwindcss.com/)
-
----
-
-**This is a research tool made by [AlteredCraft](https://alteredcraft.com)**

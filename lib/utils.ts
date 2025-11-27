@@ -1,4 +1,4 @@
-// Utility functions for Memory System v2
+// Utility functions for Implicit Memory System
 
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
