@@ -14,17 +14,10 @@ import { betaTool } from '@anthropic-ai/sdk/helpers/beta/json-schema';
 import { SessionTrace } from './session-trace';
 import { MemoryOperationLogger, MemoryOperationType } from './memory-operation-logger';
 
-interface MemoryOperation {
-  operation: string;
-  path: string;
-  timestamp: string;
-}
-
 export class LocalFilesystemMemoryTool {
   private basePath: string;
   private memoryRoot: string;
   private trace: SessionTrace | null = null;
-  private recentOperations: MemoryOperation[] = [];
   private logger: MemoryOperationLogger;
 
   constructor(basePath: string = './memories', logDir: string = './logs') {
@@ -60,24 +53,6 @@ export class LocalFilesystemMemoryTool {
       return memoryPath.substring('/memories'.length).replace(/^\//, '') || '/';
     }
     return memoryPath;
-  }
-
-  private _trackOperation(operation: string, memoryPath: string): void {
-    const cleanPath = this._normalizePath(memoryPath);
-
-    this.recentOperations.push({
-      operation,
-      path: cleanPath,
-      timestamp: new Date().toISOString()
-    });
-
-    console.log(`[MEMORY] Tracked operation: ${operation} on ${cleanPath}`);
-  }
-
-  getAndClearRecentOperations(): MemoryOperation[] {
-    const operations = [...this.recentOperations];
-    this.recentOperations = [];
-    return operations;
   }
 
   private _validatePath(memoryPath: string): string {
@@ -167,9 +142,6 @@ export class LocalFilesystemMemoryTool {
         details: `${lines.length} lines, ${result.length} bytes`
       });
 
-      // Track operation for real-time UI
-      this._trackOperation('read', command.path);
-
       // Log tool result to trace
       if (this.trace) {
         this.trace.logToolResult('memory', 'view', result, true);
@@ -228,9 +200,6 @@ export class LocalFilesystemMemoryTool {
       });
 
       const resultMsg = `Successfully created ${command.path}`;
-
-      // Track operation for real-time UI
-      this._trackOperation('create', command.path);
 
       // Log tool result to trace
       if (this.trace) {
@@ -293,9 +262,6 @@ export class LocalFilesystemMemoryTool {
       });
 
       const resultMsg = `Successfully replaced string in ${command.path}`;
-
-      // Track operation for real-time UI
-      this._trackOperation('update', command.path);
 
       // Log tool result to trace
       if (this.trace) {
@@ -365,9 +331,6 @@ export class LocalFilesystemMemoryTool {
 
       const resultMsg = `Successfully inserted line in ${command.path}`;
 
-      // Track operation for real-time UI
-      this._trackOperation('update', command.path);
-
       // Log tool result to trace
       if (this.trace) {
         this.trace.logToolResult('memory', 'insert', resultMsg, true);
@@ -420,9 +383,6 @@ export class LocalFilesystemMemoryTool {
         path: normalizedPath,
         details: isDirectory ? 'directory' : 'file'
       });
-
-      // Track operation for real-time UI
-      this._trackOperation('delete', command.path);
 
       // Log tool result to trace
       if (this.trace) {
@@ -485,9 +445,6 @@ export class LocalFilesystemMemoryTool {
       });
 
       const resultMsg = `Successfully renamed ${command.old_path} to ${command.new_path}`;
-
-      // Track operation for real-time UI
-      this._trackOperation('rename', command.new_path);
 
       // Log tool result to trace
       if (this.trace) {

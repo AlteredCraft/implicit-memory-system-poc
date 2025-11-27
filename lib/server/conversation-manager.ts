@@ -8,7 +8,7 @@ import { LocalFilesystemMemoryTool } from './memory-tool';
 import { SessionTrace } from './session-trace';
 
 export interface StreamEvent {
-  type: 'thinking' | 'memory_operation' | 'text' | 'text_delta' | 'done' | 'error';
+  type: 'thinking' | 'tool_call' | 'text' | 'text_delta' | 'done' | 'error';
   data: any;
 }
 
@@ -31,6 +31,7 @@ export class ConversationManager {
   private memoryTool: LocalFilesystemMemoryTool;
   private messages: Message[] = [];
   private trace: SessionTrace;
+  private traceEvents: Array<{ type: string; data: any }> = [];
 
   // Token tracking
   private totalInputTokens = 0;
@@ -44,8 +45,13 @@ export class ConversationManager {
     this.systemPrompt = systemPrompt;
     this.memoryTool = new LocalFilesystemMemoryTool();
 
-    // Initialize session trace
-    this.trace = new SessionTrace('./sessions', model, systemPrompt);
+    // Initialize session trace with callback to capture events
+    this.trace = new SessionTrace(
+      './sessions',
+      model,
+      systemPrompt,
+      (event) => this.traceEvents.push(event)
+    );
     this.memoryTool.setTrace(this.trace);
 
     console.log(`[ConversationManager] Initialized with model: ${model}`);
@@ -124,22 +130,13 @@ export class ConversationManager {
           }
         }
 
-        // Log tool calls to trace
-        for (const content of message.content) {
-          if (content.type === 'tool_use') {
-            const toolInput = content.input as Record<string, any>;
-            console.log(`[ConversationManager] Tool use detected: ${content.name}`);
-            this.trace.logToolCall('memory', toolInput.command, toolInput);
-          }
-        }
-
-        // Emit memory operations for UI updates (after tool execution)
-        const memoryOperations = this.memoryTool.getAndClearRecentOperations();
-        for (const operation of memoryOperations) {
-          console.log(`[ConversationManager] Emitting memory operation: ${operation.operation} on ${operation.path}`);
+        // Emit accumulated trace events (tool_call events from SessionTrace callback)
+        while (this.traceEvents.length > 0) {
+          const traceEvent = this.traceEvents.shift()!;
+          console.log(`[ConversationManager] Emitting trace event: ${traceEvent.type}`);
           yield {
-            type: 'memory_operation',
-            data: operation
+            type: traceEvent.type as 'tool_call',
+            data: traceEvent.data
           };
         }
       }
@@ -216,9 +213,17 @@ export class ConversationManager {
     this.totalCacheReadTokens = 0;
     this.totalCacheWriteTokens = 0;
 
-    // Start new trace
+    // Clear trace events queue
+    this.traceEvents = [];
+
+    // Start new trace with callback
     this.trace.finalize();
-    this.trace = new SessionTrace('./sessions', this.model, this.systemPrompt);
+    this.trace = new SessionTrace(
+      './sessions',
+      this.model,
+      this.systemPrompt,
+      (event) => this.traceEvents.push(event)
+    );
     this.memoryTool.setTrace(this.trace);
 
     return result;

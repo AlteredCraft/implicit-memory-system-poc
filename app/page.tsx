@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { storage } from '@/lib/utils';
 import { SystemPrompt } from '@/types';
 import { MemoryProvider } from '@/lib/contexts/MemoryContext';
+import { ToolCallProvider } from '@/lib/contexts/ToolCallContext';
 
 export default function Home() {
   const [sessionActive, setSessionActive] = useState(false);
@@ -143,8 +144,9 @@ export default function Home() {
 
   return (
     <MemoryProvider>
-      <div className="flex flex-col h-screen">
-        {/* Top Navigation Bar */}
+      <ToolCallProvider>
+        <div className="flex flex-col h-screen">
+          {/* Top Navigation Bar */}
         <nav className="bg-gray-900 text-white shadow-lg flex-shrink-0">
           <div className="px-4 py-3 flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -215,7 +217,7 @@ export default function Home() {
           </div>
 
           {/* Right Panel: Memory Browser */}
-          <div className="w-96 flex-shrink-0">
+          <div className="w-[32rem] flex-shrink-0">
             <MemoryBrowser />
           </div>
         </div>
@@ -273,7 +275,8 @@ export default function Home() {
           envApiKeyAvailable={envApiKeyAvailable}
           envApiKeyMasked={envApiKeyMasked}
         />
-      </div>
+        </div>
+      </ToolCallProvider>
     </MemoryProvider>
   );
 }

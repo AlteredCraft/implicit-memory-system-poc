@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { MemoryFile } from '@/types';
 import { formatRelativeTime } from '@/lib/utils';
 import { useMemoryOperationHandler } from '@/lib/hooks/useMemoryOperationHandler';
-import MEMOPConsole from './MEMOPConsole';
+import ToolCallConsole from './ToolCallConsole';
 
 export default function MemoryBrowser() {
   const [memoryFiles, setMemoryFiles] = useState<MemoryFile[]>([]);
@@ -129,8 +129,8 @@ export default function MemoryBrowser() {
         </div>
       </div>
 
-      {/* MEMOP Console */}
-      <MEMOPConsole />
+      {/* Tool Call Console */}
+      <ToolCallConsole />
 
       <div className="flex-1 overflow-y-auto p-3">
         {memoryFiles.length === 0 ? (
@@ -142,7 +142,7 @@ export default function MemoryBrowser() {
             <p className="text-sm mt-1">Claude will create memory files as you chat</p>
           </div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="grid grid-cols-2 gap-2">
             {memoryFiles.map((file) => (
               <div
                 key={file.path}

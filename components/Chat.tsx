@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { TokenUsage, StreamEvent } from '@/types';
+import { TokenUsage, StreamEvent, ToolCallEvent } from '@/types';
 import { useMemoryContext } from '@/lib/contexts/MemoryContext';
+import { useToolCallContext } from '@/lib/contexts/ToolCallContext';
 
 interface ChatProps {
   sessionActive: boolean;
@@ -18,6 +19,7 @@ interface Message {
 
 export default function Chat({ sessionActive, modelName }: ChatProps) {
   const { triggerMemoryOperation } = useMemoryContext();
+  const { triggerToolCall } = useToolCallContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -39,6 +41,42 @@ export default function Chat({ sessionActive, modelName }: ChatProps) {
     setMessages((prev) => [...prev, { role: 'system', content: text }]);
   }, []);
 
+  const deriveMemoryOperation = useCallback((toolCall: ToolCallEvent) => {
+    if (toolCall.tool_name !== 'memory') return null;
+
+    const opMap: Record<string, string> = {
+      'view': 'read',
+      'create': 'create',
+      'str_replace': 'update',
+      'insert': 'update',
+      'delete': 'delete',
+      'rename': 'rename'
+    };
+
+    const operation = opMap[toolCall.command];
+    if (!operation) return null;
+
+    // Normalize path by removing /memories prefix to match file list format
+    const normalizePath = (path: string) => {
+      if (!path) return '';
+      return path.startsWith('/memories/')
+        ? path.substring('/memories/'.length)
+        : path.startsWith('/memories')
+        ? path.substring('/memories'.length).replace(/^\//, '')
+        : path;
+    };
+
+    const rawPath = toolCall.parameters.path || toolCall.parameters.old_path || '';
+    const rawNewPath = toolCall.parameters.new_path;
+
+    return {
+      operation: operation as 'create' | 'read' | 'update' | 'delete' | 'rename',
+      path: normalizePath(rawPath),
+      new_path: rawNewPath ? normalizePath(rawNewPath) : undefined,
+      timestamp: toolCall.timestamp
+    };
+  }, []);
+
   const handleStreamEvent = (event: StreamEvent) => {
     switch (event.type) {
       case 'thinking':
@@ -50,11 +88,17 @@ export default function Chat({ sessionActive, modelName }: ChatProps) {
         setCurrentAssistantMessage((prev) => prev + event.data);
         break;
 
-      case 'memory_operation':
-        console.log('[MEMORY_EVENTS] Received SSE event:', event.data);
-        const { operation, path, timestamp } = event.data;
-        console.log(`[MEMORY_EVENTS] Triggering memory operation via Context: ${operation}, ${path}`);
-        triggerMemoryOperation({ operation, path, timestamp });
+      case 'tool_call':
+        console.log('[TOOL_CALL] Received SSE event:', event.data);
+        // Trigger tool call context for ToolCallConsole
+        triggerToolCall(event.data);
+
+        // Derive and trigger memory operation for MemoryBrowser (HDD lights, animations)
+        const memOp = deriveMemoryOperation(event.data);
+        if (memOp) {
+          console.log(`[TOOL_CALL] Derived memory operation: ${memOp.operation} on ${memOp.path}`);
+          triggerMemoryOperation(memOp);
+        }
         break;
 
       case 'tool_use_start':

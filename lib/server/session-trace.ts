@@ -15,6 +15,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { randomBytes } from 'crypto';
 
+type TraceEventCallback = (event: { type: string; data: any }) => void;
+
 interface TraceEvent {
   timestamp: string;
   event_type: string;
@@ -35,8 +37,15 @@ export class SessionTrace {
   private sessionId: string;
   private trace: TraceData;
   private traceFile: string;
+  private eventCallback?: TraceEventCallback;
 
-  constructor(basePath: string = './sessions', model: string = '', systemPrompt: string = '') {
+  constructor(
+    basePath: string = './sessions',
+    model: string = '',
+    systemPrompt: string = '',
+    eventCallback?: TraceEventCallback
+  ) {
+    this.eventCallback = eventCallback;
     this.basePath = basePath;
 
     // Create sessions directory if it doesn't exist
@@ -105,6 +114,17 @@ export class SessionTrace {
       tool_name: toolName,
       command,
       parameters
+    });
+
+    // Emit real-time event via callback
+    this.eventCallback?.({
+      type: 'tool_call',
+      data: {
+        tool_name: toolName,
+        command,
+        parameters,
+        timestamp: new Date().toISOString()
+      }
     });
   }
 

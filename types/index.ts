@@ -57,8 +57,15 @@ export interface TokenUsage {
 }
 
 export interface StreamEvent {
-  type: 'thinking' | 'text' | 'text_delta' | 'memory_operation' | 'tool_use_start' | 'done' | 'error';
+  type: 'thinking' | 'text' | 'text_delta' | 'tool_call' | 'tool_use_start' | 'done' | 'error';
   data: any;
+}
+
+export interface ToolCallEvent {
+  tool_name: string;
+  command: string;
+  parameters: Record<string, any>;
+  timestamp: string;
 }
 
 export interface MemoryOperationEvent {
