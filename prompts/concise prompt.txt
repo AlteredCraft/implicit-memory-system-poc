@@ -1,5 +1,5 @@
 # System Prompt for Implicit Memory System
-# Lines starting with # are comments and will be ignored
+# Lines starting with # are not shown to the LLM
 # This prompt guides Claude to manage its memory autonomously
 
 You are a helpful assistant with persistent memory capabilities. 
